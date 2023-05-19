@@ -1,0 +1,42 @@
+# ignore everything
+**/*
+# except for
+# in demo dir
+!demo
+!demo/*.cpp
+!demo/Makefile
+!demo/readme.txt
+
+# in doc dir
+!doc/
+!doc/*.pdf
+
+# in include dir
+!include
+!include/*.h
+!include/*.hpp
+
+# in lib dir
+!lib
+!lib/armv6
+!lib/armv7
+!lib/armv8
+!lib/mac
+!lib/x64
+!lib/x86
+!lib/**/*.a
+!lib/**/*.so*
+!lib/**/*.dylib*
+!lib/asi.rules
+!lib/README.txt
+
+# in src dir
+!src
+!src/*.cpp
+!src/*.c
+
+# in root dir
+!.gitignore
+!license.txt
+
+
