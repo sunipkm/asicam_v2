@@ -107,7 +107,7 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
     this->cameraID = cameraID;
     init_ok = false;
     exposure_ = 0.0;
-    cancel_capture = false;
+    capturing = false;
     roi_updated_ = false;
     binningX_ = 1;
     binningY_ = 1;
@@ -122,6 +122,8 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
     CCDWidth_ = 0;
     CCDHeight_ = 0;
     status_ = "Camera not initialized";
+    cam_name[0] = '\0';
+
 
     if (HasError(ASIOpenCamera(cameraID)))
     {
@@ -210,4 +212,13 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
 
     init_ok = true;
     status_ = "Camera initialized";
+}
+
+CImageData CCameraUnit_ASI::CaptureImage(bool blocking)
+{
+    CImageData data;
+    if (!init_ok)
+    {
+        throw std::runtime_error("Camera not initialized");
+    }
 }

@@ -29,10 +29,10 @@ private:
     int cameraID;
     std::mutex camLock;
     std::atomic<bool> init_ok;
-    char cam_name[100];
     std::atomic<float> exposure_;
-    std::atomic<bool> cancel_capture;
+    std::atomic<bool> capturing;
 
+    char cam_name[100];
     std::string status_;
 
     int binningX_;
@@ -48,7 +48,7 @@ private:
     int roiTop;
     int roiBottom;
 
-    bool roi_updated_;
+    std::atomic<bool> roi_updated_;
 
     int CCDWidth_;
     int CCDHeight_;
