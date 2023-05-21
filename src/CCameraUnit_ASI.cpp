@@ -209,9 +209,111 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
     {
         throw std::runtime_error("Could not initialize camera with ID " + std::to_string(cameraID));
     }
+    // set exposure to 1 ms
+    if (HasError(ASISetControlValue(cameraID, ASI_EXPOSURE, 1000, ASI_FALSE)))
+    {
+        throw std::runtime_error("Could not set exposure for camera with ID " + std::to_string(cameraID));
+    }
+    exposure_ = 0.001;
 
     init_ok = true;
     status_ = "Camera initialized";
+}
+
+void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data)
+{
+    std::lock_guard<std::mutex> lock(cam->camLock);
+    long exposure = (long) (cam->exposure_ * 1e6);
+    ASI_EXPOSURE_STATUS status;
+    if (HasError(ASIGetExpStatus(cam->cameraID, &status)))
+    {
+        cam->status_ = "Failed to get exposure status";
+        cam->capturing = false;
+        return;
+    }
+    if (status == ASI_EXP_WORKING)
+    {
+        cam->status_ = "Exposure already in progress";
+        cam->capturing = false;
+        return;
+    }
+    if (status == ASI_EXP_FAILED)
+    {
+        cam->status_ = "Last exposure attempt failed, restarting exposure";
+    }
+start_exposure:
+    if (HasError(ASIStartExposure(cam->cameraID, ASI_FALSE)))
+    {
+        cam->status_ = "Failed to start exposure";
+        cam->capturing = false;
+        return;
+    }
+    cam->capturing = true;
+    cam->status_ = "Exposure started, waiting for " + std::to_string(cam->exposure_) + " s";
+    if (exposure < 1000) // < 1 ms
+    {
+        // busy wait
+        while (!HasError(ASIGetExpStatus(cam->cameraID, &status)) && status == ASI_EXP_WORKING)
+        {
+            
+        }
+    }
+    else if (exposure < 16000) // < 16 ms
+    {
+        while (!HasError(ASIGetExpStatus(cam->cameraID, &status)) && status == ASI_EXP_WORKING)
+        {
+            Sleep(1);
+        }
+    }
+    else if (exposure < 1000000) // < 1 s
+    {
+        while (!HasError(ASIGetExpStatus(cam->cameraID, &status)) && status == ASI_EXP_WORKING)
+        {
+            Sleep(100);
+        }
+    }
+    else
+    {
+        while (!HasError(ASIGetExpStatus(cam->cameraID, &status)) && status == ASI_EXP_WORKING)
+        {
+            Sleep(1000);
+        }
+    }
+    if (status == ASI_EXP_FAILED)
+    {
+        cam->status_ = "Exposure failed";
+        cam->capturing = false;
+        return;
+    }
+    else if (status == ASI_EXP_IDLE)
+    {
+        cam->status_ = "Exposure was successful but no data is available.";
+        cam->capturing = false;
+        return;
+    }
+    else if (status == ASI_EXP_SUCCESS)
+    {
+        cam->status_ = "Exposure successful, downloading image";
+        // TODO: Create CImageData with the right size and shape
+        // Grab the Data
+        // Set appropriate metadata
+
+        // if (HasError(ASIGetDataAfterExp(cam->cameraID, (unsigned char *) data->data, data->size)))
+        // {
+        //     cam->status_ = "Failed to download image";
+        //     cam->capturing = false;
+        //     return;
+        // }
+        // cam->status_ = "Image downloaded";
+        // cam->capturing = false;
+        // return;
+    }
+    else
+    {
+        cam->status_ = "Unknown exposure status";
+        cam->capturing = false;
+        return;
+    }
 }
 
 CImageData CCameraUnit_ASI::CaptureImage(bool blocking)
@@ -221,4 +323,10 @@ CImageData CCameraUnit_ASI::CaptureImage(bool blocking)
     {
         throw std::runtime_error("Camera not initialized");
     }
+    if (capturing)
+    {
+        return data;
+    }
+    
+
 }

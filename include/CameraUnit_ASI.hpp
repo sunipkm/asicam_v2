@@ -96,7 +96,7 @@ public:
     inline double GetPixelSize() const { return pixelSz; }
 
 private:
-    static void CaptureThread(CCameraUnit_ASI *cam);
+    static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data);
     static bool HasError(int error, unsigned int line);
 };
 
