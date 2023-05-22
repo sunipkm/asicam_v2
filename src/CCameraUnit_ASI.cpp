@@ -294,19 +294,15 @@ start_exposure:
     else if (status == ASI_EXP_SUCCESS)
     {
         cam->status_ = "Exposure successful, downloading image";
-        // TODO: Create CImageData with the right size and shape
-        // Grab the Data
-        // Set appropriate metadata
-
-        // if (HasError(ASIGetDataAfterExp(cam->cameraID, (unsigned char *) data->data, data->size)))
-        // {
-        //     cam->status_ = "Failed to download image";
-        //     cam->capturing = false;
-        //     return;
-        // }
-        // cam->status_ = "Image downloaded";
-        // cam->capturing = false;
-        // return;
+        uint16_t *dataptr = new uint16_t[cam->CCDWidth_ * cam->CCDHeight_];
+        if (HasError(ASIGetDataAfterExp(cam->cameraID, (unsigned char *) dataptr, cam->CCDWidth_ * cam->CCDHeight_ * sizeof(uint16_t))))
+        {
+            cam->status_ = "Failed to download image";
+            cam->capturing = false;
+            return;
+        }
+        *data = CImageData(cam->CCDWidth_, cam->CCDHeight_, dataptr, cam->exposure_);
+        return;
     }
     else
     {
