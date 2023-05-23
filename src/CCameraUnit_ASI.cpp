@@ -241,7 +241,7 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data)
     {
         cam->status_ = "Last exposure attempt failed, restarting exposure";
     }
-start_exposure:
+    uint64_t start_time = getTime();
     if (HasError(ASIStartExposure(cam->cameraID, ASI_FALSE)))
     {
         cam->status_ = "Failed to start exposure";
@@ -301,7 +301,12 @@ start_exposure:
             cam->capturing = false;
             return;
         }
-        *data = CImageData(cam->CCDWidth_, cam->CCDHeight_, dataptr, cam->exposure_);
+        CImageData *new_img = new CImageData(cam->CCDWidth_, cam->CCDHeight_, dataptr, cam->exposure_, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
+        cam->image_data = std::shared_ptr<CImageData>(new_img); // store in shared pointer
+        if (data != nullptr)
+            *data = *new_img; // copy to output
+        cam->status_ = "Image downloaded";
+        cam->capturing = false;
         return;
     }
     else
@@ -310,6 +315,8 @@ start_exposure:
         cam->capturing = false;
         return;
     }
+    cam->capturing = false;
+    return;
 }
 
 CImageData CCameraUnit_ASI::CaptureImage(bool blocking)
@@ -323,6 +330,174 @@ CImageData CCameraUnit_ASI::CaptureImage(bool blocking)
     {
         return data;
     }
-    
+    if (blocking)
+    {
+        captureThread = std::thread(CaptureThread, this, &data);
+        captureThread.join();
+        return data;
+    }
+    else
+    {
+        captureThread = std::thread(CaptureThread, this, nullptr);
+        captureThread.detach();
+        return data;
+    }
+}
 
+void CCameraUnit_ASI::CancelCapture() 
+{
+    if (capturing)
+    {
+        if (HasError(ASIStopExposure(cameraID)))
+        {
+            // TODO: Print to log
+        }
+    }
+}
+
+void CCameraUnit_ASI::SetShutterIsOpen(bool open)
+{
+    // TODO: Implement?
+}
+
+void CCameraUnit_ASI::SetReadout(int ReadSpeed)
+{
+    return;
+}
+
+void CCameraUnit_ASI::SetTemperature(double temperatureInCelcius)
+{
+    if (!init_ok)
+    {
+       return;
+    }
+    if (temperatureInCelcius < -80)
+    {
+        return;
+    }
+    if (!HasError(ASISetControlValue(cameraID, ASI_TEMPERATURE, (long) (temperatureInCelcius * 10), ASI_TRUE)))
+    {
+        status_ = "Set cooler temperature to " + std::to_string(temperatureInCelcius);
+        return;
+    }
+    else
+    {
+        status_ = "Failed to set temperature";
+        // TODO: Log?
+    }
+}
+
+double CCameraUnit_ASI::GetTemperature() const
+{
+    if (!init_ok)
+    {
+        throw std::runtime_error("Camera not initialized");
+    }
+    long temp;
+    ASI_BOOL is_auto;
+    if (HasError(ASIGetControlValue(cameraID, ASI_TEMPERATURE, &temp, &is_auto)))
+    {
+        -273.0;
+    }
+    return temp / 10.0;
+}
+
+void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max, int y_min, int y_max)
+{
+    if (!init_ok)
+    {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(camLock);
+
+    if (binX != binY)
+    {
+        // TODO: Log or throw?
+    }
+
+    bool valid_bin = false;
+    for (int i = 0; i < 16; i++)
+    {
+        if (binX == supportedBins[i])
+        {
+            valid_bin = true;
+            break;
+        }
+    }
+
+    if (!valid_bin)
+    {
+        return;
+    }
+
+    bool change_bin = false;
+    if (binningX_ != binX)
+    {
+        change_bin = true;
+    }
+
+    binY = binX; // just to make sure
+
+    if (binningY_ != binY)
+    {
+        change_bin = true;
+    }
+
+    if (change_bin)
+    {
+        binningX_ = binX;
+        binningY_ = binY;
+    }
+
+    // if (change_bin)
+    // {
+    //     if (HasError(ArtemisBin(hCam, binX, binY), __LINE__))
+    //         return;
+    //     binningY_ = binY;
+    //     binningX_ = binX;
+    // }
+
+    int imageLeft, imageRight, imageTop, imageBottom;
+
+    imageLeft = x_min;
+    imageRight = (x_max - x_min) + imageLeft;
+    imageTop = y_min;
+    imageBottom = (y_max - y_min) + imageTop;
+
+    if (imageRight > GetCCDWidth())
+        imageRight = GetCCDWidth();
+    if (imageLeft < 0)
+        imageLeft = 0;
+    if (imageRight <= imageLeft)
+        imageRight = GetCCDWidth();
+
+    if (imageBottom > GetCCDWidth())
+        imageBottom = GetCCDHeight();
+    if (imageTop < 0)
+        imageTop = 0;
+    if (imageBottom <= imageTop)
+        imageBottom = GetCCDHeight();
+
+    if (!HasError(ArtemisSubframe(hCam, imageLeft, imageTop, imageRight - imageLeft, imageBottom - imageTop), __LINE__))
+    {
+        imageLeft_ = imageLeft;
+        imageRight_ = imageRight;
+        imageTop_ = imageTop_;
+        imageBottom_ = imageBottom_;
+        roiLeft = imageLeft;
+        roiRight = imageRight;
+        roiBottom = imageBottom;
+        roiTop = imageTop;
+    }
+    else
+    {
+        imageLeft_ = 0;
+        imageRight_ = GetCCDWidth();
+        imageTop_ = 0;
+        imageBottom_ = GetCCDHeight();
+        roiLeft = imageLeft_;
+        roiRight = imageRight_;
+        roiBottom = imageBottom_;
+        roiTop = imageTop_;
+    }
 }

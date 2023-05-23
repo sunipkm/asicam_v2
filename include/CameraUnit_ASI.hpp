@@ -31,6 +31,7 @@ private:
     std::atomic<bool> init_ok;
     std::atomic<float> exposure_;
     std::atomic<bool> capturing;
+    std::atomic<std::shared_ptr<CImageData>> image_data;
 
     char cam_name[100];
     std::string status_;
@@ -71,6 +72,7 @@ private:
 
 public:
     static int ListCameras(int &num_cameras, int *&cameraIDs, std::string *&cameraNames);
+    int GetHandle() const { return cameraID; }
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
 
@@ -96,7 +98,7 @@ public:
     inline double GetPixelSize() const { return pixelSz; }
 
 private:
-    static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data);
+    static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data = nullptr);
     static bool HasError(int error, unsigned int line);
 };
 
