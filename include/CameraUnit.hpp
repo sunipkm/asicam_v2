@@ -29,6 +29,13 @@ public:
     virtual ~CCameraUnit(){};
 
     /**
+     * @brief Get the camera vendor (used to identify backend library)
+     * 
+     * @return const char* Camera vendor.
+     */
+    virtual const char *GetVendor() const = 0;
+
+    /**
      * @brief Capture image from the connected camera
      * 
      * @param blocking If true, block until capture is complete. Blocks by default.

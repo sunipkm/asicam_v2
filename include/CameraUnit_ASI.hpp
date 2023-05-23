@@ -15,6 +15,8 @@
 #include "CameraUnit.hpp"
 #include "ASICamera2.h"
 
+#define LIBVENDOR "ZWO ASI"
+
 #include <atomic>
 #include <thread>
 #include <mutex>
@@ -26,6 +28,8 @@
 class CCameraUnit_ASI : public CCameraUnit
 {
 private:
+    const char* vendor = LIBVENDOR;
+
     int cameraID;
     std::mutex camLock;
     std::atomic<bool> init_ok;
@@ -75,6 +79,8 @@ public:
     int GetHandle() const { return cameraID; }
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
+
+    inline const char *GetVendor() const { return vendor; }
 
     CImageData CaptureImage(bool blocking);
     void CancelCapture();
