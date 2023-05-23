@@ -21,8 +21,8 @@
 #include <thread>
 #include <mutex>
 
-#ifndef _Catchable
-#define _Catchable
+#if (__cplusplus >= 202002L)
+#error "C++20 is not supported."
 #endif
 
 class CCameraUnit_ASI : public CCameraUnit
@@ -33,7 +33,7 @@ private:
     int cameraID;
     std::mutex camLock;
     std::atomic<bool> init_ok;
-    std::atomic<float> exposure_;
+    std::atomic<double> exposure_;
     std::atomic<bool> capturing;
     std::atomic<std::shared_ptr<CImageData>> image_data;
 
@@ -43,26 +43,27 @@ private:
     int binningX_;
     int binningY_;
 
-    int imageLeft_;
-    int imageRight_;
-    int imageTop_;
-    int imageBottom_;
-
     int roiLeft;
     int roiRight;
     int roiTop;
     int roiBottom;
 
-    std::atomic<bool> roi_updated_;
+    mutable std::mutex roiLock;
+    mutable ROI roi;
 
     int CCDWidth_;
     int CCDHeight_;
 
-    double pixelSz;
-    bool hasShutter;
-    bool hasCooler;
-    bool isUSB3;
+    double pixelSz = 0;
+    bool hasShutter = false;
+    bool hasCooler = false;
+    bool isUSB3 = true;
     bool is8bitonly = false;
+
+    double minExposure = 0;
+    double maxExposure = 0;
+    long minGain = 0;
+    long maxGain = 0;
 
     float elecPerADU;
     int bitDepth;
@@ -76,24 +77,31 @@ private:
 
 public:
     static int ListCameras(int &num_cameras, int *&cameraIDs, std::string *&cameraNames);
-    int GetHandle() const { return cameraID; }
+    void *GetHandle() const { return (void *) cameraID; }
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
 
     inline const char *GetVendor() const { return vendor; }
 
-    CImageData CaptureImage(bool blocking);
+    CImageData CaptureImage(bool blocking = true, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr);
+    const CImageData *GetLastImage() const;
     void CancelCapture();
+    bool IsCapturing() const { return capturing; };
 
     inline bool CameraReady() const { return init_ok; }
     inline const char *CameraName() const { return cam_name; }
-    void SetExposure(float exposureInSeconds);
-    inline float GetExposure() const { return exposure_; }
-    void SetShutterIsOpen(bool open);
-    void SetReadout(int ReadSpeed);
+    void SetExposure(double exposureInSeconds);
+    inline double GetExposure() const { return exposure_; }
+    float GetGain() const;
+    float SetGain(float gain);
+    const double GetMinExposure() const { return minExposure; };
+    const double GetMaxExposure() const { return maxExposure; };
+    const float GetMinGain() const { return 0; };
+    const float GetMaxGain() const { return 100; };
+    inline void _NotImplemented SetShutterOpen(bool open) { return; };
     void SetTemperature(double temperatureInCelcius);
     double GetTemperature() const;
-    void SetBinningAndROI(int x, int y, int x_min = 0, int x_max = 0, int y_min = 0, int y_max = 0);
+    void _Catchable SetBinningAndROI(int x, int y, int x_min = 0, int x_max = 0, int y_min = 0, int y_max = 0);
     inline int GetBinningX() const { return binningX_; }
     inline int GetBinningY() const { return binningY_; }
     const ROI *GetROI() const;
@@ -104,7 +112,7 @@ public:
     inline double GetPixelSize() const { return pixelSz; }
 
 private:
-    static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data = nullptr);
+    static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data = nullptr, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr);
     static bool HasError(int error, unsigned int line);
 };
 

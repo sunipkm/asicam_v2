@@ -14,13 +14,37 @@
 #include "ImageData.hpp"
 #include <string>
 
+#ifndef _Catchable
+/**
+ * @brief Functions marked with _Catchable are expected to throw exceptions.
+ * 
+ */
+#define _Catchable
+#endif
+
+#ifndef _NotImplemented
+/**
+ * @brief Functions marked with _NotImplemented are not implemented.
+ * 
+ */
+#define _NotImplemented
+#endif
+
+/**
+ * @brief ROI struct specifying a region of interest
+ * 
+ */
 typedef struct
 {
-    int x_min;
-    int x_max;
-    int y_min;
-    int y_max;
+    int x_min; // Minimum X (in unbinned coordinates)
+    int x_max; // Maximum X (in unbinned coordinates)
+    int y_min; // Minimum Y (in unbinned coordinates)
+    int y_max; // Maximum Y (in unbinned coordinates)
+    int bin_x; // Binning in X
+    int bin_y; // Binning in Y
 } ROI;
+
+typedef void (*CCameraUnitCallback)(const CImageData *image, const ROI roi, void *data);
 
 const double INVALID_TEMPERATURE = -273.0;
 class CCameraUnit
@@ -36,18 +60,42 @@ public:
     virtual const char *GetVendor() const = 0;
 
     /**
+     * @brief Get the internal camera handle
+     * 
+     * @return const void* 
+     */
+    virtual const void *GetHandle() const = 0;
+
+    /**
      * @brief Capture image from the connected camera
      * 
      * @param blocking If true, block until capture is complete. Blocks by default.
+     * @param callback_fn Callback function to call when capture is complete. If blocking is true, this is ignored.
+     * @param user_data User data to pass to the callback function. If blocking is true, this is ignored.
      * @return CImageData Container with raw image data
      */
-    virtual CImageData CaptureImage(bool blocking = true) = 0;
+    virtual CImageData CaptureImage(bool blocking = true, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr) = 0;
 
     /**
      * @brief Cancel an ongoing capture
      * 
      */
     virtual void CancelCapture() = 0;
+
+    /**
+     * @brief Check if a capture is ongoing
+     * 
+     * @return true 
+     * @return false 
+     */
+    virtual bool IsCapturing() const = 0;
+
+    /**
+     * @brief Get the last captured image
+     * 
+     * @return const CImageData* Pointer to the last captured image
+     */
+    virtual const CImageData *GetLastImage() const = 0;
 
     /**
      * @brief Check if camera was initialized properly
@@ -69,14 +117,14 @@ public:
      * 
      * @param exposureInSeconds 
      */
-    virtual void SetExposure(float exposureInSeconds) = 0;
+    virtual void SetExposure(double exposureInSeconds) = 0;
 
     /**
      * @brief Get the currently set exposure
      * 
-     * @return float Exposure time in seconds
+     * @return double Exposure time in seconds
      */
-    virtual float GetExposure() const = 0;
+    virtual double GetExposure() const = 0;
 
     /**
      * @brief Get the current gain
@@ -97,42 +145,35 @@ public:
      * 
      * @return float 
      */
-    virtual float GetMinExposure() const = 0;
+    virtual const double GetMinExposure() const = 0;
 
     /**
      * @brief Get the maximum exposure time in seconds
      * 
      * @return float 
      */
-    virtual float GetMaxExposure() const = 0;
+    virtual const double GetMaxExposure() const = 0;
 
     /**
      * @brief Get the minimum usable gain
      * 
      * @return float 
      */
-    virtual float GetMinGain() const = 0;
+    virtual const float GetMinGain() const = 0;
 
     /**
      * @brief Get the maximum usable gain
      * 
      * @return float 
      */
-    virtual float GetMaxGain() const = 0;
+    virtual const float GetMaxGain() const = 0;
 
     /**
      * @brief Open or close the shutter
      * 
      * @param open 
      */
-    virtual void SetShutterIsOpen(bool open) = 0;
-
-    /**
-     * @brief Set the readout speed (unused)
-     * 
-     * @param ReadSpeed 
-     */
-    virtual void SetReadout(int ReadSpeed) = 0;
+    virtual void SetShutterOpen(bool open) = 0;
 
     /**
      * @brief Set the cooler target temperature
@@ -158,7 +199,7 @@ public:
      * @param y_min Topmost pixel index (unbinned)
      * @param y_max Bottommost pixel index (unbinned)
      */
-    virtual void SetBinningAndROI(int x, int y, int x_min = 0, int x_max = 0, int y_min = 0, int y_max = 0) = 0;
+    virtual void _Catchable SetBinningAndROI(int x, int y, int x_min = 0, int x_max = 0, int y_min = 0, int y_max = 0) = 0;
 
     /**
      * @brief Get the X binning set on the detector
@@ -201,6 +242,13 @@ public:
      * @return int 
      */
     virtual int GetCCDHeight() const = 0;
+
+    /**
+     * @brief Get the pixel size in microns
+     * 
+     * @return double Pixel size in microns
+     */
+    virtual double GetPixelSize() const = 0;
 };
 
 #endif // __CAMERAUNIT_HPP__

@@ -19,6 +19,7 @@
 typedef SSIZE_T ssize_t;
 #endif
 #include <string>
+#include <map>
 
 #ifndef _Nullable
 /**
@@ -106,6 +107,8 @@ class CImageData
     int pixelMax;
     bool autoscale;
 
+    std::map<std::string, std::string> m_metadata;
+
 public:
     /**
      * @brief Construct a new CImageData object
@@ -167,6 +170,16 @@ public:
      * @param cameraName Camera name
      */
     void SetImageMetadata(float exposureTime, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "");
+    /**
+     * @brief Set the extended metadata info
+     * 
+     * @param key String key
+     * @param value String value
+     */
+    void SetExtendedMetadata(std::string const key, std::string const value)
+    {
+        m_metadata[key] = value;
+    }
     /**
      * @brief Retrieve JPEG image corresponding to raw data
      *

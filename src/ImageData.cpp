@@ -692,13 +692,18 @@ bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefi
         fits_create_img(fptr, bitpix, naxis, naxes, &status);
         fits_write_key(fptr, TSTRING, "PROGRAM", (void *)CIMAGE_PROGNAME_STRING, NULL, &status);
         fits_write_key(fptr, TSTRING, "CAMERA", (void *)(m_cameraName.c_str()), NULL, &status);
-        fits_write_key(fptr, TULONGLONG, "TIMESTAMP", &(m_timestamp), NULL, &status);
+        fits_write_key(fptr, TLONGLONG, "TIMESTAMP", &(m_timestamp), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BZERO", &bzero, NULL, &status);
         fits_write_key(fptr, TUSHORT, "BSCALE", &bscale, NULL, &status);
         fits_write_key(fptr, TFLOAT, "CCDTEMP", &(m_temperature), NULL, &status);
         fits_write_key(fptr, TUINT, "EXPOSURE_MS", &(exposureTime), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINX", &(m_binX), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINY", &(m_binY), NULL, &status);
+
+        for (auto iter = m_metadata.begin(); iter != m_metadata.end(); iter++)
+        {
+            fits_write_key(fptr, TSTRING, iter->first.c_str(), (void *)(iter->second.c_str()), NULL, &status);
+        }
 
         long fpixel[] = {1, 1};
         fits_write_pix(fptr, TUSHORT, fpixel, (m_imageWidth) * (m_imageHeight), m_imageData, &status);
