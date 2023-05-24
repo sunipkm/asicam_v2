@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <thread>
+#include <memory>
 #include <mutex>
 
 #if (__cplusplus >= 202002L)

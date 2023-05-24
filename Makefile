@@ -2,7 +2,7 @@ CC = gcc
 CXX = g++
 
 EDCFLAGS = -O2 -Wall -I include/ $(CFLAGS)
-EDCXXFLAGS = -O2 -Wall -I include/ $(CXXFLAGS)
+EDCXXFLAGS = -O2 -Wall -I include/ -std=c++11 $(CXXFLAGS)
 EDLDFLAGS = -L lib/x64 -lm -lpthread -lASICamera2 $(LDFLAGS)
 
 LIBTARGET = lib/libCameraUnit_ASI.a
@@ -25,7 +25,7 @@ ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS)
 
 all: $(LIBTARGET)
 
-$(LIBTARGET): $(ALL_OBJS) $(ALL_DEPS)
+$(LIBTARGET): $(ALL_OBJS)
 	ar -crs $@ $(ALL_OBJS)
 
 -include $(CDEPS)
