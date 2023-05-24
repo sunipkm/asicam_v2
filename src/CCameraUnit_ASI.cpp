@@ -16,8 +16,6 @@
 #include <mutex>
 #include <chrono>
 
-#include "meb_print.h"
-
 #if !defined(OS_Windows)
 #include <unistd.h>
 static inline void Sleep(int dwMilliseconds)
@@ -405,7 +403,7 @@ const CImageData *CCameraUnit_ASI::GetLastImage() const
     {
         return nullptr;
     }
-    return image_data.load().get();
+    return image_data.get();
 }
 
 float CCameraUnit_ASI::GetGain() const
@@ -448,7 +446,7 @@ float CCameraUnit_ASI::SetGain(float gain)
     return GetGain();
 }
 
-CImageData CCameraUnit_ASI::CaptureImage(bool blocking = true, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr)
+CImageData CCameraUnit_ASI::CaptureImage(bool blocking, CCameraUnitCallback callback_fn, void *user_data)
 {
     CImageData data;
     if (!init_ok)
@@ -547,7 +545,7 @@ double CCameraUnit_ASI::GetTemperature() const
     ASI_BOOL is_auto;
     if (HasError(ASIGetControlValue(cameraID, ASI_TEMPERATURE, &temp, &is_auto)))
     {
-        INVALID_TEMPERATURE;
+        return INVALID_TEMPERATURE;
     }
     return temp / 10.0;
 }
@@ -558,7 +556,6 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
     {
         return;
     }
-    std::lock_guard<std::mutex> lock(camLock);
 
     if (binX != binY)
     {
@@ -628,7 +625,7 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
         {
             std::runtime_error("Failed to reset ROI format after failed offset change");
         }
-        // TODO: log
+        CCAMERAUNIT_ASI_DBG_ERR("Failed to set ROI offset");
         return;
     }
     // Here, everything has changed successfully

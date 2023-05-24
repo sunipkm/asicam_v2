@@ -27,6 +27,7 @@ static inline void sync()
 
 #include <algorithm>
 #include <chrono>
+#include <mutex>
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -51,6 +52,7 @@ static inline uint64_t getTime()
 
 void CImageData::ClearImage()
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_imageData != 0)
         delete[] m_imageData;
     m_imageData = 0;
@@ -75,7 +77,7 @@ CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageDat
     : m_imageData(NULL), m_jpegData(nullptr), sz_jpegData(-1), convert_jpeg(false)
 {
     ClearImage();
-
+    std::lock_guard<std::mutex> lock(m_mutex);
     if ((imageWidth <= 0) || (imageHeight <= 0))
     {
         return;
@@ -121,6 +123,7 @@ CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageDat
 
 void CImageData::SetImageMetadata(float exposureTime, int binX, int binY, float temperature, uint64_t timestamp, std::string cameraName)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_exposureTime = exposureTime;
     m_binX = binX;
     m_binY = binY;
@@ -137,7 +140,9 @@ CImageData::CImageData(const CImageData &rhs)
     : m_imageData(NULL), m_jpegData(nullptr), sz_jpegData(-1), convert_jpeg(false)
 {
     ClearImage();
-
+    std::unique_lock<std::mutex> lock1(m_mutex, std::defer_lock);
+    std::unique_lock<std::mutex> lock2(rhs.m_mutex, std::defer_lock);
+    std::lock(lock1, lock2);
     if ((rhs.m_imageWidth == 0) || (rhs.m_imageHeight == 0) || (rhs.m_imageData == 0))
     {
         return;
@@ -167,6 +172,8 @@ CImageData::CImageData(const CImageData &rhs)
     pixelMin = rhs.pixelMin;
     pixelMax = rhs.pixelMax;
     autoscale = rhs.autoscale;
+
+    m_metadata = rhs.m_metadata;
 }
 
 CImageData &CImageData::operator=(const CImageData &rhs)
@@ -177,6 +184,10 @@ CImageData &CImageData::operator=(const CImageData &rhs)
     }
 
     ClearImage();
+
+    std::unique_lock<std::mutex> lock1(m_mutex, std::defer_lock);
+    std::unique_lock<std::mutex> lock2(rhs.m_mutex, std::defer_lock);
+    std::lock(lock1, lock2);
 
     if ((rhs.m_imageWidth == 0) || (rhs.m_imageHeight == 0) || (rhs.m_imageData == 0))
     {
@@ -212,10 +223,7 @@ CImageData &CImageData::operator=(const CImageData &rhs)
 
 CImageData::~CImageData()
 {
-    if (m_imageData != NULL)
-        delete[] m_imageData;
-    if (m_jpegData != nullptr)
-        delete[] m_jpegData;
+    ClearImage();
 }
 
 ImageStats CImageData::GetStats() const
@@ -224,6 +232,8 @@ ImageStats CImageData::GetStats() const
     {
         return ImageStats(0, 0, 0, 0);
     }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     int min = 0xFFFF;
     int max = 0;
@@ -645,6 +655,7 @@ bool CImageData::FindOptimumExposure(float &targetExposure, float percentilePixe
 
 bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefix, bool filePrefixIsName, int i, int n, char *outString, ssize_t outStringSz, bool syncOnWrite)
 {
+    std::lock_guard< std::mutex > lock(m_mutex);
     static char defaultFilePrefix[] = CIMAGE_PREFIX_STRING;
     static char defaultDirPrefix[] = "." DIR_DELIM "fits" DIR_DELIM;
     if ((filePrefix == NULL) || (strlen(filePrefix) == 0))

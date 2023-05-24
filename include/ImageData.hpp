@@ -20,6 +20,7 @@ typedef SSIZE_T ssize_t;
 #endif
 #include <string>
 #include <map>
+#include <mutex>
 
 #ifndef _Nullable
 /**
@@ -108,6 +109,7 @@ class CImageData
     bool autoscale;
 
     std::map<std::string, std::string> m_metadata;
+    mutable std::mutex m_mutex;
 
 public:
     /**

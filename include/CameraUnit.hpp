@@ -30,6 +30,14 @@
 #define _NotImplemented
 #endif
 
+#ifndef CCAMERAUNIT_DBG_LVL
+/**
+ * @brief Debug level for the camera unit. 0 = no debug, 1 = errors only, 2 = errors and warnings, 3 = errors, warnings and info
+ * 
+ */
+#define CCAMERAUNIT_DBG_LVL 3
+#endif // !CCAMERAUNIT_DBG_LVL
+
 /**
  * @brief ROI struct specifying a region of interest
  * 

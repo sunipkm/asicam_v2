@@ -25,6 +25,10 @@
 #error "C++20 is not supported."
 #endif
 
+#ifndef CCAMERAUNIT_ASI_DBG_LVL
+#define CCAMERAUNIT_ASI_DBG_LVL CCAMERAUNIT_DBG_LVL
+#endif
+
 class CCameraUnit_ASI : public CCameraUnit
 {
 private:
@@ -35,7 +39,7 @@ private:
     std::atomic<bool> init_ok;
     std::atomic<double> exposure_;
     std::atomic<bool> capturing;
-    std::atomic<std::shared_ptr<CImageData>> image_data;
+    std::shared_ptr<CImageData> image_data;
 
     char cam_name[100];
     std::string status_;
@@ -77,7 +81,7 @@ private:
 
 public:
     static int ListCameras(int &num_cameras, int *&cameraIDs, std::string *&cameraNames);
-    void *GetHandle() const { return (void *) cameraID; }
+    const void *GetHandle() const { return (void *)(uintptr_t) cameraID; }
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
 
