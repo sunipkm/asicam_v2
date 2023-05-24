@@ -82,16 +82,17 @@ private:
 
 public:
     static int ListCameras(int &num_cameras, int *&cameraIDs, std::string *&cameraNames);
-    const void *GetHandle() const { return (void *)(uintptr_t) cameraID; }
+    CCameraUnit_ASI() {};
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
 
     inline const char *GetVendor() const { return vendor; }
+    const void *GetHandle() const { return (void *)(uintptr_t) cameraID; }
 
     CImageData CaptureImage(bool blocking = true, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr);
-    const CImageData *GetLastImage() const;
     void CancelCapture();
     bool IsCapturing() const { return capturing; };
+    const CImageData *GetLastImage() const;
 
     inline bool CameraReady() const { return init_ok; }
     inline const char *CameraName() const { return cam_name; }
@@ -115,6 +116,8 @@ public:
     inline int GetCCDHeight() const { return CCDHeight_; }
     
     inline double GetPixelSize() const { return pixelSz; }
+
+    void PrintCtrlCapInfo(ASI_CONTROL_TYPE ctrlType) const;
 
 private:
     static void CaptureThread(CCameraUnit_ASI *cam, CImageData *data = nullptr, CCameraUnitCallback callback_fn = nullptr, void *user_data = nullptr);

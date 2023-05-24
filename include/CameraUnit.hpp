@@ -52,13 +52,18 @@ typedef struct
     int bin_y; // Binning in Y
 } ROI;
 
+static void PrintROI(ROI roi)
+{
+    printf("ROI: x_min = %d, x_max = %d, y_min = %d, y_max = %d, bin_x = %d, bin_y = %d\n", roi.x_min, roi.x_max, roi.y_min, roi.y_max, roi.bin_x, roi.bin_y);
+}
+
 typedef void (*CCameraUnitCallback)(const CImageData *image, const ROI roi, void *data);
 
 const double INVALID_TEMPERATURE = -273.0;
 class CCameraUnit
 {
 public:
-    virtual ~CCameraUnit(){};
+    virtual ~CCameraUnit() = default;
 
     /**
      * @brief Get the camera vendor (used to identify backend library)

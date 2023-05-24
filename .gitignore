@@ -2,7 +2,7 @@
 **/*
 # except for
 # in demo dir
-!demo
+!demo/
 !demo/*.cpp
 !demo/Makefile
 !demo/readme.txt
@@ -17,7 +17,7 @@
 !include/*.hpp
 
 # in lib dir
-!lib
+!lib/
 !lib/armv6
 !lib/armv7
 !lib/armv8
@@ -29,11 +29,16 @@
 !lib/**/*.dylib*
 !lib/asi.rules
 !lib/README.txt
+lib/libCameraUnit_*.a
 
 # in src dir
 !src
 !src/*.cpp
 !src/*.c
+
+# in example dir
+!example
+!example/*.cpp
 
 # in root dir
 !.gitignore

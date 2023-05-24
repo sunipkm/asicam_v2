@@ -27,28 +27,29 @@ static inline void Sleep(int dwMilliseconds)
 #if !defined(OS_Windows)
 #define YELLOW_FG "\033[33m"
 #define RED_FG "\033[31m"
+#define CYAN_FG "\033[36m"
 #define RESET "\033[0m"
 #else
-#define YELLOW_FG 
-#define RED_FG 
-#define RESET 
+#define YELLOW_FG
+#define RED_FG
+#define RESET
 #endif
 
 #if (CCAMERAUNIT_ASI_DBG_LVL >= 3)
-#define CCAMERAUNIT_ASI_DBG_INFO(fmt, ...)                                                            \
-    {                                                                                          \
-        fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-        fflush(stderr);                                                                        \
+#define CCAMERAUNIT_ASI_DBG_INFO(fmt, ...)                                                                   \
+    {                                                                                                        \
+        fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                      \
     }
-#define CCAMERAUNIT_ASI_DBG_INFO_NONL(fmt, ...)                                                  \
-    {                                                                                     \
-        fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-        fflush(stderr);                                                                   \
+#define CCAMERAUNIT_ASI_DBG_INFO_NONL(fmt, ...)                                                         \
+    {                                                                                                   \
+        fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                 \
     }
-#define CCAMERAUNIT_ASI_DBG_INFO_NONE(fmt, ...)     \
-    {                                        \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
-        fflush(stderr);                      \
+#define CCAMERAUNIT_ASI_DBG_INFO_NONE(fmt, ...)            \
+    {                                                      \
+        fprintf(stderr, CYAN_FG fmt RESET, ##__VA_ARGS__); \
+        fflush(stderr);                                    \
     }
 #else
 #define CCAMERAUNIT_ASI_DBG_INFO(fmt, ...)
@@ -57,20 +58,20 @@ static inline void Sleep(int dwMilliseconds)
 #endif
 
 #if (CCAMERAUNIT_ASI_DBG_LVL >= 2)
-#define CCAMERAUNIT_ASI_DBG_WARN(fmt, ...)                                                                            \
+#define CCAMERAUNIT_ASI_DBG_WARN(fmt, ...)                                                                     \
     {                                                                                                          \
         fprintf(stderr, "%s:%d:%s(): " YELLOW_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                        \
     }
-#define CCAMERAUNIT_ASI_DBG_WARN_NONL(fmt, ...)                                                  \
+#define CCAMERAUNIT_ASI_DBG_WARN_NONL(fmt, ...)                                           \
     {                                                                                     \
         fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                   \
     }
-#define CCAMERAUNIT_ASI_DBG_WARN_NONE(fmt, ...)     \
-    {                                        \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
-        fflush(stderr);                      \
+#define CCAMERAUNIT_ASI_DBG_WARN_NONE(fmt, ...) \
+    {                                           \
+        fprintf(stderr, fmt, ##__VA_ARGS__);    \
+        fflush(stderr);                         \
     }
 #else
 #define CCAMERAUNIT_ASI_DBG_WARN(fmt, ...)
@@ -79,7 +80,7 @@ static inline void Sleep(int dwMilliseconds)
 #endif
 
 #if (CCAMERAUNIT_ASI_DBG_LVL >= 1)
-#define CCAMERAUNIT_ASI_DBG_ERR(fmt, ...)                                                                          \
+#define CCAMERAUNIT_ASI_DBG_ERR(fmt, ...)                                                                   \
     {                                                                                                       \
         fprintf(stderr, "%s:%d:%s(): " RED_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                     \
@@ -103,10 +104,10 @@ bool CCameraUnit_ASI::HasError(int error, unsigned int line)
         return true;
     case ASI_SUCCESS:
         return false;
-#define ASI_ERROR_EXPAND(x)                                             \
-    case x:                                                             \
+#define ASI_ERROR_EXPAND(x)                                                          \
+    case x:                                                                          \
         fprintf(stderr, "%s, %d: ASI error: " RED_FG #x RESET "\n", __FILE__, line); \
-        fflush(stderr);                                                 \
+        fflush(stderr);                                                              \
         return true;
 
         ASI_ERROR_EXPAND(ASI_ERROR_INVALID_INDEX)
@@ -156,6 +157,7 @@ int CCameraUnit_ASI::ListCameras(int &num_cameras, int *&cameraIDs, std::string 
         {
             HasError(res);
             delete[] cameraIDs;
+            delete[] cameraNames;
             num_cameras = 0;
             return -res;
         }
@@ -275,8 +277,8 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
 
     if (controlCaps[ASI_EXPOSURE])
     {
-        minExposure = controlCaps[ASI_EXPOSURE]->MinValue;
-        maxExposure = controlCaps[ASI_EXPOSURE]->MaxValue;
+        minExposure = controlCaps[ASI_EXPOSURE]->MinValue * 1e-6;
+        maxExposure = controlCaps[ASI_EXPOSURE]->MaxValue * 1e-6;
     }
     else
     {
@@ -293,10 +295,50 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
     {
         throw std::runtime_error("Could not set exposure for camera with ID " + std::to_string(cameraID));
     }
+
+    if (HasError(ASISetROIFormat(cameraID, CCDWidth_, CCDHeight_, 1, image_type)))
+    {
+        throw std::runtime_error("Could not set ROI format for camera with ID " + std::to_string(cameraID));
+    }
+
     exposure_ = 0.001;
 
     init_ok = true;
     status_ = "Camera initialized";
+}
+
+CCameraUnit_ASI::~CCameraUnit_ASI()
+{
+    if (init_ok)
+    {
+        CCAMERAUNIT_ASI_DBG_INFO("Closing camera");
+        if (capturing)
+        {
+            CancelCapture();
+        }
+        if (captureThread.joinable())
+        {
+            captureThread.join();
+        }
+        ASICloseCamera(cameraID);
+    }
+}
+
+void CCameraUnit_ASI::PrintCtrlCapInfo(ASI_CONTROL_TYPE ctrlType) const
+{
+    if (controlCaps[ctrlType] != nullptr)
+    {
+        fprintf(stderr, "Control type: %d [%s]", ctrlType, controlCaps[ctrlType]->Name);
+        fprintf(stderr, "Description: %s\n", controlCaps[ctrlType]->Description);
+        fprintf(stderr, "Min: %ld, Max: %ld, Default: %ld, IsAutoSupported: %d, IsWritable: %d\n",
+                controlCaps[ctrlType]->MinValue, controlCaps[ctrlType]->MaxValue,
+                controlCaps[ctrlType]->DefaultValue, controlCaps[ctrlType]->IsAutoSupported,
+                controlCaps[ctrlType]->IsWritable);
+    }
+    else
+    {
+        fprintf(stderr, "Control type: %d [Not supported]\n", ctrlType);
+    }
 }
 
 void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCameraUnitCallback callback_fn, void *user_data)
@@ -328,7 +370,7 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         return;
     }
     cam->capturing = true;
-    cam->status_ = "Exposure started, waiting for " + std::to_string(cam->exposure_) + " s"; 
+    cam->status_ = "Exposure started, waiting for " + std::to_string(cam->exposure_) + " s";
     if (exposure < 16000) // < 1 ms
     {
         while (!HasError(ASIGetExpStatus(cam->cameraID, &status)) && status == ASI_EXP_WORKING)
@@ -372,8 +414,10 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
             cam->capturing = false;
             return;
         }
-        CImageData *new_img = new CImageData(cam->CCDWidth_, cam->CCDHeight_, dataptr, cam->exposure_, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
-        cam->image_data = std::shared_ptr<CImageData>(new_img); // store in shared pointer
+        int iwid = (cam->roiRight - cam->roiLeft) / cam->binningX_;
+        int ihei = (cam->roiBottom - cam->roiTop) / cam->binningY_;
+        CImageData *new_img = new CImageData(iwid, ihei, dataptr, cam->exposure_, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
+        cam->image_data = std::shared_ptr<CImageData>(new_img);                                                                                                                   // store in shared pointer
         if (data != nullptr)
             *data = *new_img; // copy to output
         cam->status_ = "Image downloaded";
@@ -421,6 +465,7 @@ float CCameraUnit_ASI::GetGain() const
         CCAMERAUNIT_ASI_DBG_ERR("Failed to get gain");
         return 0;
     }
+    CCAMERAUNIT_ASI_DBG_INFO("Gain is %ld", gain);
     return ((float)(gain - minGain)) / ((maxGain - minGain) * 100.0);
 }
 
@@ -437,6 +482,7 @@ float CCameraUnit_ASI::SetGain(float gain)
         return 0;
     }
     long newGain = (long)(((gain * (maxGain - minGain)) / 100) + minGain);
+    CCAMERAUNIT_ASI_DBG_INFO("Setting gain to %ld", newGain);
     std::lock_guard<std::mutex> lock(camLock);
     if (HasError(ASISetControlValue(cameraID, ASI_GAIN, newGain, ASI_FALSE)))
     {
@@ -523,15 +569,64 @@ void CCameraUnit_ASI::SetTemperature(double temperatureInCelcius)
     {
         return;
     }
-    if (!HasError(ASISetControlValue(cameraID, ASI_TEMPERATURE, (long)(temperatureInCelcius), ASI_TRUE)))
+    long tempval = (long) temperatureInCelcius;
+    CCAMERAUNIT_ASI_DBG_INFO("Setting temperature to %lf -> %ld C", temperatureInCelcius, tempval);
+    if (!HasError(ASISetControlValue(cameraID, ASI_TARGET_TEMP, tempval, ASI_FALSE)))
     {
         status_ = "Set cooler temperature to " + std::to_string(temperatureInCelcius);
-        return;
     }
     else
     {
         status_ = "Failed to set temperature";
         CCAMERAUNIT_ASI_DBG_WARN("Failed to set temperature");
+        return;
+    }
+    if (CCAMERAUNIT_ASI_DBG_LVL >= 3)
+    {
+        long val;
+        ASI_BOOL bAuto;
+        ASIGetControlValue(cameraID, ASI_TARGET_TEMP, &val, &bAuto);
+        CCAMERAUNIT_ASI_DBG_INFO("Target temperature is %ld C", val);
+    }
+    if (!HasError(ASISetControlValue(cameraID, ASI_COOLER_ON, 1, ASI_FALSE)))
+    {
+        status_ = "Cooler on";
+    }
+    else
+    {
+        status_ = "Failed to turn on cooler";
+        CCAMERAUNIT_ASI_DBG_WARN("Failed to turn on cooler");
+        return;
+    }
+    if (controlCaps[ASI_FAN_ON] != nullptr && controlCaps[ASI_FAN_ON]->IsWritable)
+    {
+        if (!HasError(ASISetControlValue(cameraID, ASI_FAN_ON, 1, ASI_FALSE)))
+        {
+            status_ = "Fan on";
+        }
+        else
+        {
+            status_ = "Failed to turn on fan";
+            CCAMERAUNIT_ASI_DBG_WARN("Failed to turn on fan");
+            if (HasError(ASISetControlValue(cameraID, ASI_COOLER_ON, 0, ASI_FALSE)))
+            {
+                status_ = "Failed to turn off cooler";
+                CCAMERAUNIT_ASI_DBG_ERR("Failed to turn off cooler after failing to turn on fan");
+                throw std::runtime_error("Failed to turn off cooler after failing to turn on fan");
+            }
+        }
+    }
+    if (controlCaps[ASI_COOLER_POWER_PERC] != nullptr && controlCaps[ASI_COOLER_POWER_PERC]->IsWritable)
+    {
+        if (!HasError(ASISetControlValue(cameraID, ASI_COOLER_POWER_PERC, 100, ASI_TRUE)))
+        {
+            status_ = "Cooler power 100%";
+        }
+        else
+        {
+            status_ = "Failed to set cooler power";
+            CCAMERAUNIT_ASI_DBG_WARN("Failed to set cooler power");
+        }
     }
 }
 
@@ -594,8 +689,8 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
     y_min /= binY;
     y_max /= binY;
 
-    int img_wid = (x_max - x_min) / binX;
-    int img_height = (y_max - y_min) / binY;
+    int img_wid = (x_max - x_min);
+    int img_height = (y_max - y_min);
 
     int old_img_w, old_img_h, old_bin;
     ASI_IMG_TYPE old_bitdepth;
@@ -614,7 +709,9 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
         std::runtime_error("Failed to get current ROI format");
         return;
     }
-    if (HasError(ASISetROIFormat(cameraID, img_wid, img_height, binX, is8bitonly ? ASI_IMG_RAW8 : ASI_IMG_RAW16)))
+    CCAMERAUNIT_ASI_DBG_INFO("Current ROI: %d x %d bin %d bitdepth %d", old_img_w, old_img_h, old_bin, old_bitdepth);
+    CCAMERAUNIT_ASI_DBG_INFO("New ROI: %d x %d bin %d bitdepth %d", img_wid, img_height, binX, image_type);
+    if (HasError(ASISetROIFormat(cameraID, img_wid, img_height, binX, image_type)))
     {
         std::runtime_error("Failed to set ROI format");
     }
@@ -640,6 +737,7 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
     roiTop = imageTop_;
     binningX_ = binX;
     binningY_ = binY;
+    CCAMERAUNIT_ASI_DBG_INFO("ROI set to (%d, %d) to (%d, %d) bin %d bitdepth %d", roiLeft, roiTop, roiRight, roiBottom, binningX_, image_type);
 }
 
 const ROI *CCameraUnit_ASI::GetROI() const
