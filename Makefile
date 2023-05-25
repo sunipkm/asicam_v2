@@ -66,7 +66,7 @@ $(LIBTARGET): $(ALL_OBJS)
 %.o: %.cc Makefile
 	$(CC) $(EDCFLAGS) -MMD -MP -c $< -o $@
 
--include $(CXXDEPS)
+-include $(CXXDEPS) $(CXXEXEDEPS)
 
 %.o: %.cpp Makefile
 	$(CXX) $(EDCXXFLAGS) -MMD -MP -c $< -o $@
