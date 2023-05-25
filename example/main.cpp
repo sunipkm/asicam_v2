@@ -55,7 +55,7 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
     static int pixelTarget = 40000;
     static int pixelUncertainty = 5000;
     static int maxBin = 1;
-    static int imgXMin = 100, imgYMin = 335, imgXMax = -1, imgYMax = -1;
+    static int imgXMin = 200, imgYMin = 200, imgXMax = 2800, imgYMax = 2800;
 
     static float exposure_1 = 0.2; // 200 ms
     static int bin_1 = 1;          // start with bin 1
