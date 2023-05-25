@@ -697,7 +697,7 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
 
     if (binX != binY)
     {
-        std::invalid_argument("BinX and BinY must be equal");
+        throw std::invalid_argument("BinX and BinY must be equal");
     }
 
     bool valid_bin = false;
@@ -712,7 +712,7 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
 
     if (!valid_bin)
     {
-        std::invalid_argument("Binning value is invalid.");
+        throw std::invalid_argument("Binning value is invalid.");
     }
 
     binY = binX; // just to make sure
@@ -744,26 +744,27 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
     {
         if (img_wid * img_height % 1024 != 0)
         {
-            std::invalid_argument("ASI120 only supports image sizes that are multiples of 1024");
+            throw std::invalid_argument("ASI120 only supports image sizes that are multiples of 1024");
         }
     }
     if (HasError(ASIGetROIFormat(cameraID, &old_img_w, &old_img_h, &old_bin, &old_bitdepth)))
     {
-        std::runtime_error("Failed to get current ROI format");
+        throw std::runtime_error("Failed to get current ROI format");
         return;
     }
     CCAMERAUNIT_ASI_DBG_INFO("Current ROI: %d x %d bin %d bitdepth %d", old_img_w, old_img_h, old_bin, old_bitdepth);
     CCAMERAUNIT_ASI_DBG_INFO("New ROI: %d x %d bin %d bitdepth %d", img_wid, img_height, binX, image_type);
     if (HasError(ASISetROIFormat(cameraID, img_wid, img_height, binX, image_type)))
     {
-        std::runtime_error("Failed to set ROI format");
+        CCAMERAUNIT_ASI_DBG_ERR("Failed to set ROI format");
+        throw std::runtime_error("Failed to set ROI format");
     }
 
     if (HasError(ASISetStartPos(cameraID, x_min, y_min)))
     {
         if (HasError(ASISetROIFormat(cameraID, old_img_w, old_img_h, old_bin, old_bitdepth)))
         {
-            std::runtime_error("Failed to reset ROI format after failed offset change");
+            throw std::runtime_error("Failed to reset ROI format after failed offset change");
         }
         CCAMERAUNIT_ASI_DBG_ERR("Failed to set ROI offset");
         return;

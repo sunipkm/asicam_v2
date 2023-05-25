@@ -44,5 +44,6 @@ lib/libCameraUnit_*.a
 !.gitignore
 !license.txt
 !Makefile
+!README.MD
 
 
