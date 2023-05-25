@@ -111,6 +111,8 @@ public:
     inline void _NotImplemented SetShutterOpen(bool open) { return; };
     void SetTemperature(double temperatureInCelcius);
     double GetTemperature() const;
+    double GetCoolerPower() const;
+    inline double _NotImplemented SetCoolerPower(double power) { return 0; }
     void _Catchable SetBinningAndROI(int x, int y, int x_min = 0, int x_max = 0, int y_min = 0, int y_max = 0);
     inline int GetBinningX() const { return binningX_; }
     inline int GetBinningY() const { return binningY_; }

@@ -540,7 +540,8 @@ CImageData CCameraUnit_ASI::CaptureImage(bool blocking, CCameraUnitCallback call
     CImageData data;
     if (!init_ok)
     {
-        throw std::runtime_error("Camera not initialized");
+        CCAMERAUNIT_ASI_DBG_WARN("Camera not initialized");
+        return data;
     }
     if (capturing)
     {
@@ -677,7 +678,7 @@ double CCameraUnit_ASI::GetTemperature() const
 {
     if (!init_ok)
     {
-        throw std::runtime_error("Camera not initialized");
+        return INVALID_TEMPERATURE;
     }
     long temp;
     ASI_BOOL is_auto;
@@ -686,6 +687,21 @@ double CCameraUnit_ASI::GetTemperature() const
         return INVALID_TEMPERATURE;
     }
     return temp / 10.0;
+}
+
+double CCameraUnit_ASI::GetCoolerPower() const
+{
+    if (!init_ok)
+    {
+        return -1;
+    }
+    long power;
+    ASI_BOOL is_auto;
+    if (HasError(ASIGetControlValue(cameraID, ASI_COOLER_POWER_PERC, &power, &is_auto)))
+    {
+        return -1;
+    }
+    return power;
 }
 
 void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max, int y_min, int y_max)

@@ -246,6 +246,21 @@ public:
     virtual double GetTemperature() const = 0;
 
     /**
+     * @brief Get the current cooler power
+     * 
+     * @return double Cooler power %
+     */
+    virtual double GetCoolerPower() const = 0;
+
+    /**
+     * @brief Set the current cooler power
+     * 
+     * @param power Cooler power %
+     * @return double 
+     */
+    virtual double SetCoolerPower(double power) = 0;
+
+    /**
      * @brief Set the Binning And ROI information
      *
      * @param x X axis binning
