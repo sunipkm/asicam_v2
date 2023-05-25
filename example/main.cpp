@@ -188,8 +188,14 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    camera_thread = std::thread(frame_grabber, camera, cadence);
+    camera->SetTemperature(-15);
 
+    camera_thread = std::thread(frame_grabber, camera, cadence);
+    while (!done)
+    {
+        sleep(1);
+        bprintf("%s" GREEN_FG "Current CCD Temperature: %lf C\r", get_time_now(), camera->GetTemperature());
+    }
     camera_thread.join();
     sync();
 

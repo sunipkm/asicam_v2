@@ -74,6 +74,8 @@ $(LIBTARGET): $(ALL_OBJS)
 clean:
 	rm -f $(ALL_OBJS) $(ALL_DEPS) $(CXXEXEDEPS) $(CXXEXEOBJS) $(LIBTARGET) testprog
 
-spotless: clean
+cleandata:
 	rm -f bootcount*
 	rm -rf data
+
+spotless: clean cleandata

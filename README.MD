@@ -11,5 +11,5 @@ ssh-set-date <remote server>
 
 ### Synchronize directory over `ssh`
 ```sh
-rsync -rav /path/to/local remote_host:/path/to/remote
+rsync -rav /path/to/local remote_host:/path/to/remote_root/
 ```
