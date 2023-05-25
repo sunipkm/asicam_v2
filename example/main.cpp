@@ -59,6 +59,8 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
 
     static float exposure_1 = 0.2; // 200 ms
     static int bin_1 = 1;          // start with bin 1
+    static bool change_roi = true;
+    static bool change_exposure = true;
 
     if (cam == nullptr)
     {
@@ -72,8 +74,16 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
         // aeronomy section
         {
             // set binning, ROI, exposure
-            cam->SetBinningAndROI(bin_1, bin_1, imgXMin, imgXMax, imgYMin, imgYMax);
-            cam->SetExposure(exposure_1);
+            if (change_roi)
+            {
+                change_roi = false;
+                cam->SetBinningAndROI(bin_1, bin_1, imgXMin, imgXMax, imgYMin, imgYMax);
+            }
+            if (change_exposure)
+            {
+                change_exposure = false;
+                cam->SetExposure(exposure_1);
+            }
             CImageData img = cam->CaptureImage(); // capture frame
             if (!img.SaveFits((char *)"comics", dirname))     // save frame
             {
@@ -86,10 +96,17 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
             sync();
             // run auto exposure
             float last_exposure = exposure_1;
+            int last_bin = bin_1;
             img.FindOptimumExposure(exposure_1, bin_1, pixelPercentile, pixelTarget, maxExposure, maxBin, 100, pixelUncertainty);
             if (exposure_1 != last_exposure)
             {
                 bprintlf(YELLOW_FG "[%" PRIu64 "] AERO: Exposure changed from %.3f s to %.3f s", start, last_exposure, exposure_1);
+                change_exposure = true;
+            }
+            if (bin_1 != last_bin)
+            {
+                bprintlf(YELLOW_FG "[%" PRIu64 "] AERO: Bin changed from %d to %d", start, last_bin, bin_1);
+                change_roi = true;
             }
         }
         start = get_msec() - start;
