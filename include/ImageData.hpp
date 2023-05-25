@@ -91,6 +91,8 @@ class CImageData
     float m_exposureTime;
     int m_binX;
     int m_binY;
+    int m_imgtop;
+    int m_imgleft;
     float m_temperature;
     uint64_t m_timestamp;
 
@@ -124,13 +126,17 @@ public:
      * @param imageHeight Height of image
      * @param imageData [optional] Pointer to image data
      * @param exposureTime [optional] Exposure length of image
+     * @param imageLeft [optional] Left offset of image
+     * @param imageTop [optional] Top offset of image
+     * @param binX [optional] X axis bin
+     * @param binY [optional] Y axis bin
      * @param enableJpeg [optional] Enable JPEG conversion
      * @param JpegQuality [optional] Quality of JPEG conversion
      * @param pixelMin [optional] JPEG image scaling pixel count minimum, -1 for default (0x0000), overriden by autoscale flag
      * @param pixelMax [optional] JPEG image scaling pixel count maximum, -1 for default (0xffff), overriden by autoscale flag
      * @param autoscale [optional] Auto-scale JPEG image brightness based on data
      */
-    CImageData(int imageWidth, int imageHeight, unsigned short *imageData = NULL, float exposureTime = 0, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "", bool enableJpeg = false, int JpegQuality = 100, int pixelMin = -1, int pixelMax = -1, bool autoscale = true);
+    CImageData(int imageWidth, int imageHeight, unsigned short *imageData = NULL, float exposureTime = 0, int imageLeft = 0, int imageTop = 0, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "", bool enableJpeg = false, int JpegQuality = 100, int pixelMin = -1, int pixelMax = -1, bool autoscale = true);
 
     /**
      * @brief Construct a new CImageData object from another CImageData object
@@ -165,13 +171,15 @@ public:
      * @brief Set metadata for the image
      *
      * @param exposureTime Exposure for the image
-     * @param binX X axia bin
-     * @param binY Y axis bin
-     * @param temperature CCD Temperature
-     * @param timestamp Image timestamp
-     * @param cameraName Camera name
+     * @param imageLeft [optional] Left offset of image
+     * @param imageTop [optional] Top offset of image
+     * @param binX [optional] X axia bin
+     * @param binY [optional] Y axis bin
+     * @param temperature [optional] CCD Temperature
+     * @param timestamp [optional] Image timestamp
+     * @param cameraName [optional] Camera name
      */
-    void SetImageMetadata(float exposureTime, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "");
+    void SetImageMetadata(float exposureTime, int imageLeft = 0, int imageTop = 0, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "");
     /**
      * @brief Set the extended metadata info
      * 

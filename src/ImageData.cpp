@@ -59,6 +59,8 @@ void CImageData::ClearImage()
 
     m_imageWidth = 0;
     m_imageHeight = 0;
+    m_imgleft = 0;
+    m_imgtop = 0;
 
     if (m_jpegData != nullptr)
     {
@@ -73,7 +75,7 @@ CImageData::CImageData()
     ClearImage();
 }
 
-CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageData, float exposureTime, int binX, int binY, float temperature, uint64_t timestamp, std::string cameraName, bool enableJpeg, int JpegQuality, int pixelMin, int pixelMax, bool autoscale)
+CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageData, float exposureTime, int imageLeft, int imageTop, int binX, int binY, float temperature, uint64_t timestamp, std::string cameraName, bool enableJpeg, int JpegQuality, int pixelMin, int pixelMax, bool autoscale)
     : m_imageData(NULL), m_jpegData(nullptr), sz_jpegData(-1), convert_jpeg(false)
 {
     ClearImage();
@@ -100,6 +102,8 @@ CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageDat
     m_imageWidth = imageWidth;
     m_imageHeight = imageHeight;
     m_exposureTime = exposureTime;
+    m_imgleft = imageLeft;
+    m_imgtop = imageTop;
     m_binX = binX;
     m_binY = binY;
     m_temperature = temperature;
@@ -121,10 +125,12 @@ CImageData::CImageData(int imageWidth, int imageHeight, unsigned short *imageDat
     }
 }
 
-void CImageData::SetImageMetadata(float exposureTime, int binX, int binY, float temperature, uint64_t timestamp, std::string cameraName)
+void CImageData::SetImageMetadata(float exposureTime, int imageLeft, int imageTop, int binX, int binY, float temperature, uint64_t timestamp, std::string cameraName)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_exposureTime = exposureTime;
+    m_imgleft = imageLeft;
+    m_imgtop = imageTop;
     m_binX = binX;
     m_binY = binY;
     m_temperature = temperature;
@@ -159,6 +165,8 @@ CImageData::CImageData(const CImageData &rhs)
     m_imageWidth = rhs.m_imageWidth;
     m_imageHeight = rhs.m_imageHeight;
     m_exposureTime = rhs.m_exposureTime;
+    m_imgleft = rhs.m_imgleft;
+    m_imgtop = rhs.m_imgtop;
     m_binX = rhs.m_binX;
     m_binY = rhs.m_binY;
     m_temperature = rhs.m_temperature;
@@ -205,6 +213,8 @@ CImageData &CImageData::operator=(const CImageData &rhs)
     m_imageWidth = rhs.m_imageWidth;
     m_imageHeight = rhs.m_imageHeight;
     m_exposureTime = rhs.m_exposureTime;
+    m_imgleft = rhs.m_imgleft;
+    m_imgtop = rhs.m_imgtop;
     m_binX = rhs.m_binX;
     m_binY = rhs.m_binY;
     m_temperature = rhs.m_temperature;
@@ -668,7 +678,7 @@ bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefi
     int status = 0, bitpix = USHORT_IMG, naxis = 2;
     int bzero = 32768, bscale = 1;
     long naxes[2] = {(long)(m_imageWidth), (long)(m_imageHeight)};
-    unsigned int exposureTime = m_exposureTime * 1000U;
+    unsigned int exposureTime = m_exposureTime * 1000000U;
     if (!filePrefixIsName)
     {
         if (n > 0)
@@ -707,7 +717,9 @@ bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefi
         fits_write_key(fptr, TUSHORT, "BZERO", &bzero, NULL, &status);
         fits_write_key(fptr, TUSHORT, "BSCALE", &bscale, NULL, &status);
         fits_write_key(fptr, TFLOAT, "CCDTEMP", &(m_temperature), NULL, &status);
-        fits_write_key(fptr, TUINT, "EXPOSURE_MS", &(exposureTime), NULL, &status);
+        fits_write_key(fptr, TUINT, "EXPOSURE_US", &(exposureTime), NULL, &status);
+        fits_write_key(fptr, TUINT, "OFFSET_X", &(m_imgleft), NULL, &status);
+        fits_write_key(fptr, TUINT, "OFFSET_Y", &(m_imgtop), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINX", &(m_binX), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINY", &(m_binY), NULL, &status);
 

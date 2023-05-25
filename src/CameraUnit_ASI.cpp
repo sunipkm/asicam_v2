@@ -416,7 +416,9 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         }
         int iwid = (cam->roiRight - cam->roiLeft) / cam->binningX_;
         int ihei = (cam->roiBottom - cam->roiTop) / cam->binningY_;
-        CImageData *new_img = new CImageData(iwid, ihei, dataptr, cam->exposure_, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
+        int imgleft = cam->roiLeft / cam->binningX_;
+        int imgtop = cam->roiTop / cam->binningY_;
+        CImageData *new_img = new CImageData(iwid, ihei, dataptr, cam->exposure_, imgleft, imgtop, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
         cam->image_data = std::shared_ptr<CImageData>(new_img);                                                                                                                   // store in shared pointer
         if (data != nullptr)
             *data = *new_img; // copy to output
@@ -490,6 +492,47 @@ float CCameraUnit_ASI::SetGain(float gain)
         return 0;
     }
     return GetGain();
+}
+
+long CCameraUnit_ASI::GetGainRaw() const
+{
+    if (!init_ok)
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Camera not initialized");
+        return 0;
+    }
+
+    long gain;
+    ASI_BOOL bAuto;
+    if (HasError(ASIGetControlValue(cameraID, ASI_GAIN, &gain, &bAuto)))
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Failed to get gain");
+        return 0;
+    }
+    CCAMERAUNIT_ASI_DBG_INFO("Gain is %ld", gain);
+    return gain;
+}
+
+long CCameraUnit_ASI::SetGainRaw(long gain)
+{
+    if (!init_ok)
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Camera not initialized");
+        return 0;
+    }
+    if (gain < minGain || gain > maxGain)
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Gain must be between %ld and %ld", minGain, maxGain);
+        return 0;
+    }
+    CCAMERAUNIT_ASI_DBG_INFO("Setting gain to %ld", gain);
+    std::lock_guard<std::mutex> lock(camLock);
+    if (HasError(ASISetControlValue(cameraID, ASI_GAIN, gain, ASI_FALSE)))
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Failed to set gain");
+        return 0;
+    }
+    return GetGainRaw();
 }
 
 CImageData CCameraUnit_ASI::CaptureImage(bool blocking, CCameraUnitCallback callback_fn, void *user_data)

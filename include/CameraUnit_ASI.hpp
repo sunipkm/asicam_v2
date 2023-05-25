@@ -100,6 +100,10 @@ public:
     inline double GetExposure() const { return exposure_; }
     float GetGain() const;
     float SetGain(float gain);
+    long GetGainRaw() const;
+    long SetGainRaw(long gain);
+    inline int _NotImplemented GetOffset() const { return 0; }
+    inline int _NotImplemented SetOffset(int offset) { return 0; }
     const double GetMinExposure() const { return minExposure; };
     const double GetMaxExposure() const { return maxExposure; };
     const float GetMinGain() const { return 0; };

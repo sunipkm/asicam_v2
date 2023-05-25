@@ -1,9 +1,38 @@
 CC = gcc
 CXX = g++
 
+ifeq ($(OS), Windows_NT)
+	$(error Windows is not supported.)
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Linux)
+		UNAME_P := $(shell uname -m)
+		ifeq ($(UNAME_P), x86_64)
+			LIBASIDIR = lib/x64/
+		endif
+		ifeq ($(UNAME_P), x86)
+			LIBASIDIR = lib/x86/
+		endif
+		ifneq ($(findstring armv6,$(UNAME_P)),)
+			LIBASIDIR = lib/armv6/
+		endif
+		ifneq ($(findstring armv7,$(UNAME_P)),)
+			LIBASIDIR = lib/armv7/
+		endif
+		ifneq ($(findstring aarch64,$(UNAME_P)),)
+			LIBASIDIR = lib/armv8/
+		endif
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		LIBASIDIR = lib/macos/
+	endif
+endif
+
+LIBASISTATIC = $(LIBASIDIR)/libASICamera2.a
+
 EDCFLAGS = -O2 -Wall -I include/ $(CFLAGS)
 EDCXXFLAGS = -O2 -Wall -I include/ -std=c++11 -fPIC $(CXXFLAGS)
-EDLDFLAGS = -L lib/x64 -lASICamera2 -lm -lpthread -lcfitsio $(LDFLAGS)
+EDLDFLAGS = -lm -lpthread -lcfitsio -lusb-1.0 $(LDFLAGS)
 
 LIBTARGET = lib/libCameraUnit_ASI.a
 
@@ -23,13 +52,13 @@ CXXEXESRCS := $(wildcard example/*.cpp)
 CXXEXEOBJS := $(patsubst %.cpp,%.o,$(CXXEXESRCS))
 CXXEXEDEPS := $(patsubst %.cpp,%.d,$(CXXEXESRCS))
 
-ALL_DEPS := $(CDEPS) $(CCDEPS) $(CXXDEPS)
-ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS)
+ALL_DEPS := $(CDEPS) $(CCDEPS) $(CXXDEPS) $(CXXEXEOBJS)
+ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS) $(CXXEXEDEPS)
 
 
 all: $(LIBTARGET) testprog
 
-testprog: $(CXXEXEOBJS) $(LIBTARGET)
+testprog: $(CXXEXEOBJS) $(LIBTARGET) $(LIBASISTATIC)
 	$(CXX) -o $@ $^ $(LIBTARGET) $(EDLDFLAGS)
 
 $(LIBTARGET): $(ALL_OBJS)
