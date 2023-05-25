@@ -1,6 +1,6 @@
 CC = gcc
 CXX = g++
-
+LIBASIDIR = lib/armv7/
 ifeq ($(OS), Windows_NT)
 	$(error Windows is not supported.)
 else
@@ -12,15 +12,6 @@ else
 		endif
 		ifeq ($(UNAME_P), x86)
 			LIBASIDIR = lib/x86/
-		endif
-		ifneq ($(findstring armv6,$(UNAME_P)),)
-			LIBASIDIR = lib/armv6/
-		endif
-		ifneq ($(findstring armv7,$(UNAME_P)),)
-			LIBASIDIR = lib/armv7/
-		endif
-		ifneq ($(findstring aarch64,$(UNAME_P)),)
-			LIBASIDIR = lib/armv8/
 		endif
 	endif
 	ifeq ($(UNAME_S), Darwin)
