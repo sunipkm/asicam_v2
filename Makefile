@@ -23,7 +23,7 @@ LIBASISTATIC = $(LIBASIDIR)/libASICamera2.a
 
 EDCFLAGS = -O2 -Wall -I include/ $(CFLAGS)
 EDCXXFLAGS = -O2 -Wall -I include/ -std=c++11 -fPIC $(CXXFLAGS)
-EDLDFLAGS = -lm -lpthread -lcfitsio -lusb-1.0 $(LDFLAGS)
+EDLDFLAGS = -lm -lpthread -lcfitsio -lusb-1.0 -latomic $(LDFLAGS)
 
 LIBTARGET = lib/libCameraUnit_ASI.a
 
