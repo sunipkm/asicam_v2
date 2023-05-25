@@ -52,8 +52,8 @@ CXXEXESRCS := $(wildcard example/*.cpp)
 CXXEXEOBJS := $(patsubst %.cpp,%.o,$(CXXEXESRCS))
 CXXEXEDEPS := $(patsubst %.cpp,%.d,$(CXXEXESRCS))
 
-ALL_DEPS := $(CDEPS) $(CCDEPS) $(CXXDEPS) $(CXXEXEOBJS)
-ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS) $(CXXEXEDEPS)
+ALL_DEPS := $(CDEPS) $(CCDEPS) $(CXXDEPS)
+ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS)
 
 
 all: $(LIBTARGET) testprog
@@ -80,4 +80,4 @@ $(LIBTARGET): $(ALL_OBJS)
 	$(CXX) $(EDCXXFLAGS) -MMD -MP -c $< -o $@
 
 clean:
-	rm -f $(ALL_OBJS) $(ALL_DEPS) $(LIBTARGET)
+	rm -f $(ALL_OBJS) $(ALL_DEPS) $(CXXEXEDEPS) $(CXXEXEOBJS) $(LIBTARGET)
