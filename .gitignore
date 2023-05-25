@@ -38,5 +38,6 @@
 # in root dir
 !.gitignore
 !license.txt
+!Makefile
 
 
