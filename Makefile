@@ -1,5 +1,10 @@
 CC = gcc
 CXX = g++
+
+EDCFLAGS := -O2 -Wall -I include/ $(shell pkg-config --cflags cfitsio) $(CFLAGS)
+EDCXXFLAGS := -O2 -Wall -I include/ -std=c++11 -fPIC $(shell pkg-config --cflags cfitsio) $(CXXFLAGS)
+EDLDFLAGS := -lm -lpthread -lcfitsio -lusb-1.0 -latomic $(shell pkg-config --libs cfitsio) $(LDFLAGS)
+
 LIBASIDIR = lib/armv7/
 ifeq ($(OS), Windows_NT)
 	$(error Windows is not supported.)
@@ -15,15 +20,11 @@ else
 		endif
 	endif
 	ifeq ($(UNAME_S), Darwin)
-		LIBASIDIR = lib/macos/
+		LIBASIDIR = lib/mac/
 	endif
 endif
 
 LIBASISTATIC = $(LIBASIDIR)/libASICamera2.a
-
-EDCFLAGS = -O2 -Wall -I include/ $(CFLAGS)
-EDCXXFLAGS = -O2 -Wall -I include/ -std=c++11 -fPIC $(CXXFLAGS)
-EDLDFLAGS = -lm -lpthread -lcfitsio -lusb-1.0 -latomic $(LDFLAGS)
 
 LIBTARGET = lib/libCameraUnit_ASI.a
 
@@ -47,7 +48,7 @@ ALL_DEPS := $(CDEPS) $(CCDEPS) $(CXXDEPS)
 ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS)
 
 
-all: $(LIBTARGET) testprog
+all: $(LIBTARGET) $(CXXEXEOBJS) testprog
 
 testprog: $(CXXEXEOBJS) $(LIBTARGET) $(LIBASISTATIC)
 	$(CXX) -o $@ $^ $(LIBTARGET) $(EDLDFLAGS)
@@ -71,4 +72,8 @@ $(LIBTARGET): $(ALL_OBJS)
 	$(CXX) $(EDCXXFLAGS) -MMD -MP -c $< -o $@
 
 clean:
-	rm -f $(ALL_OBJS) $(ALL_DEPS) $(CXXEXEDEPS) $(CXXEXEOBJS) $(LIBTARGET)
+	rm -f $(ALL_OBJS) $(ALL_DEPS) $(CXXEXEDEPS) $(CXXEXEOBJS) $(LIBTARGET) testprog
+
+spotless: clean
+	rm -f bootcount*
+	rm -rf data

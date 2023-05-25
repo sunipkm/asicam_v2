@@ -62,6 +62,12 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
     static bool change_roi = true;
     static bool change_exposure = true;
 
+    int gain = cam->SetGainRaw(100);
+    if (gain != 100)
+    {
+        bprintlf(RED_FG "Could not set gain to 100");
+    }
+
     if (cam == nullptr)
     {
         dbprintlf(FATAL "Camera is NULL");
