@@ -301,6 +301,13 @@ CCameraUnit_ASI::CCameraUnit_ASI(int cameraID)
         throw std::runtime_error("Could not set ROI format for camera with ID " + std::to_string(cameraID));
     }
 
+    roiLeft = 0;
+    roiRight = CCDWidth_;
+    roiTop = 0;
+    roiBottom = CCDHeight_;
+    binningX_ = 1;
+    binningY_ = 1;
+
     exposure_ = 0.001;
 
     init_ok = true;

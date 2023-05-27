@@ -50,7 +50,7 @@ static char dirname[256] = {
 #define FRAME_TIME_SEC 20
 void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // cadence in seconds
 {
-    static float maxExposure = 120;
+    static float maxExposure = 200;
     static float pixelPercentile = 99.7;
     static int pixelTarget = 40000;
     static int pixelUncertainty = 5000;
@@ -61,9 +61,9 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
     static int bin_1 = 1;          // start with bin 1
     static bool change_roi = true;
     static bool change_exposure = true;
-
-    int gain = cam->SetGainRaw(100);
-    if (gain != 100)
+#define GAIN 200
+    int gain = cam->SetGainRaw(GAIN);
+    if (gain != GAIN)
     {
         bprintlf(RED_FG "Could not set gain to 100");
     }
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    camera->SetTemperature(-15);
+    camera->SetTemperature(-25);
 
     camera_thread = std::thread(frame_grabber, camera, cadence);
     while (!done)
@@ -196,6 +196,7 @@ int main(int argc, char *argv[])
         sleep(1);
         bprintf("%s" GREEN_FG "Current CCD Temperature: %lf C, Cooler %.0lf%%\r", get_time_now(), camera->GetTemperature(), camera->GetCoolerPower());
     }
+    camera->CancelCapture();
     camera_thread.join();
     sync();
 
