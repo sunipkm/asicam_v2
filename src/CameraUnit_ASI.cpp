@@ -429,6 +429,7 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         cam->image_data = std::shared_ptr<CImageData>(new_img);                                                                                                                   // store in shared pointer
         if (data != nullptr)
             *data = *new_img; // copy to output
+        delete[] dataptr;
         cam->status_ = "Image downloaded";
         if (callback_fn != nullptr)
         {
