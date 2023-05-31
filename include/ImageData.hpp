@@ -79,6 +79,28 @@ public:
     double GetStandardDeviationValue() const { return stddev_; }
 };
 
+class CImageMetadata
+{
+public:
+    double exposureTime;
+    int binX;
+    int binY;
+    int imgTop;
+    int imgLeft;
+    double temperature;
+    uint64_t timestamp;
+    std::string cameraName;
+    int64_t gain;
+    int64_t offset;
+    std::map<std::string, std::string> extendedMetadata;
+
+    void print(FILE *stream = stdout) const;
+    inline void AddExtendedAttribute(std::string key, std::string value)
+    {
+        extendedMetadata[key] = value;
+    }
+};
+
 /**
  * @brief Class to contain 16-bit raw image data
  *
@@ -88,15 +110,7 @@ class CImageData
     int m_imageHeight;
     int m_imageWidth;
 
-    float m_exposureTime;
-    int m_binX;
-    int m_binY;
-    int m_imgtop;
-    int m_imgleft;
-    float m_temperature;
-    uint64_t m_timestamp;
-
-    std::string m_cameraName;
+    CImageMetadata m_metadata;
 
     unsigned short *m_imageData;
 
@@ -110,7 +124,6 @@ class CImageData
     int pixelMax;
     bool autoscale;
 
-    std::map<std::string, std::string> m_metadata;
     mutable std::mutex m_mutex;
 
 public:
@@ -125,18 +138,15 @@ public:
      * @param imageWidth Width of image
      * @param imageHeight Height of image
      * @param imageData [optional] Pointer to image data
-     * @param exposureTime [optional] Exposure length of image
-     * @param imageLeft [optional] Left offset of image
-     * @param imageTop [optional] Top offset of image
-     * @param binX [optional] X axis bin
-     * @param binY [optional] Y axis bin
+     * @param metadata [optional] Image metadata (exposure, timestamp, binning, gain etc.)
+     * @param is8bit [optional] Image data is 8-bit (default is 16-bit)
      * @param enableJpeg [optional] Enable JPEG conversion
      * @param JpegQuality [optional] Quality of JPEG conversion
      * @param pixelMin [optional] JPEG image scaling pixel count minimum, -1 for default (0x0000), overriden by autoscale flag
      * @param pixelMax [optional] JPEG image scaling pixel count maximum, -1 for default (0xffff), overriden by autoscale flag
      * @param autoscale [optional] Auto-scale JPEG image brightness based on data
      */
-    CImageData(int imageWidth, int imageHeight, unsigned short *imageData = NULL, float exposureTime = 0, int imageLeft = 0, int imageTop = 0, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "", bool enableJpeg = false, int JpegQuality = 100, int pixelMin = -1, int pixelMax = -1, bool autoscale = true);
+    CImageData(int imageWidth, int imageHeight, unsigned short *imageData = NULL, CImageMetadata metadata = CImageMetadata(), bool is8bit = false, bool enableJpeg = false, int JpegQuality = 100, int pixelMin = -1, int pixelMax = -1, bool autoscale = true);
 
     /**
      * @brief Construct a new CImageData object from another CImageData object
@@ -161,6 +171,13 @@ public:
     void ClearImage();
 
     /**
+     * @brief Get the metadata associated with the current image.
+     * 
+     * @return CImageMetadata Image metadata.
+     */
+    inline CImageMetadata GetImageMetadata() const { return m_metadata; }
+
+    /**
      * @brief Returns if the container contains image data
      *
      * @return true
@@ -181,6 +198,12 @@ public:
      */
     void SetImageMetadata(float exposureTime, int imageLeft = 0, int imageTop = 0, int binX = 1, int binY = 1, float temperature = 0, uint64_t timestamp = 0, std::string cameraName = "");
     /**
+     * @brief Set metadata for the image
+     *
+     * @param metadata Image metadata
+     */
+    void SetImageMetadata(CImageMetadata metadata);
+    /**
      * @brief Set the extended metadata info
      * 
      * @param key String key
@@ -188,7 +211,7 @@ public:
      */
     void SetExtendedMetadata(std::string const key, std::string const value)
     {
-        m_metadata[key] = value;
+        m_metadata.AddExtendedAttribute(key, value);
     }
     /**
      * @brief Retrieve JPEG image corresponding to raw data
@@ -318,37 +341,37 @@ public:
      * 
      * @return float Exposure in seconds
      */
-    inline float GetExposure() const {return m_exposureTime;}
+    inline float GetExposure() const {return m_metadata.exposureTime;}
     /**
      * @brief Get the X axis (width) binning
      * 
      * @return int 
      */
-    inline int GetBinX() const {return m_binX;}
+    inline int GetBinX() const {return m_metadata.binX;}
     /**
      * @brief Get the Y axis (height) binning
      * 
      * @return int 
      */
-    inline int GetBinY() const {return m_binY;}
+    inline int GetBinY() const {return m_metadata.binY;}
     /**
      * @brief Get the CCD Temperature
      * 
      * @return float Temperature in degree C
      */
-    inline float GetTemperature() const {return m_temperature;}
+    inline float GetTemperature() const {return m_metadata.temperature;}
     /**
      * @brief Get the timestamp of image
      * 
      * @return uint64_t Timestamp since epoch in ms
      */
-    inline uint64_t GetTimestamp() const {return m_timestamp;}
+    inline uint64_t GetTimestamp() const {return m_metadata.timestamp;}
     /**
      * @brief Get the camera name string
      * 
      * @return std::string 
      */
-    inline std::string GetCameraName() const {return m_cameraName;}
+    inline std::string GetCameraName() const {return m_metadata.cameraName;}
 
 private:
     /**

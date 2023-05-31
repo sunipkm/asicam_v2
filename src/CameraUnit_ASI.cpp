@@ -32,6 +32,7 @@ static inline void Sleep(int dwMilliseconds)
 #else
 #define YELLOW_FG
 #define RED_FG
+#define CYAN_FG
 #define RESET
 #endif
 
@@ -425,7 +426,18 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         int ihei = (cam->roiBottom - cam->roiTop) / cam->binningY_;
         int imgleft = cam->roiLeft / cam->binningX_;
         int imgtop = cam->roiTop / cam->binningY_;
-        CImageData *new_img = new CImageData(iwid, ihei, dataptr, cam->exposure_, imgleft, imgtop, cam->binningX_, cam->binningY_, cam->GetTemperature(), start_time, std::string(cam->cam_name)); // create new image data object
+        CImageMetadata metadata;
+        metadata.binX = cam->binningX_;
+        metadata.binY = cam->binningY_;
+        metadata.exposureTime = cam->exposure_;
+        metadata.timestamp = start_time;
+        metadata.temperature = cam->GetTemperature();
+        metadata.cameraName = cam->cam_name;
+        metadata.imgLeft = imgleft;
+        metadata.imgTop = imgtop;
+        metadata.gain = cam->GetGainRaw();
+        metadata.offset = cam->GetOffset();
+        CImageData *new_img = new CImageData(iwid, ihei, dataptr, metadata); // create new image data object
         cam->image_data = std::shared_ptr<CImageData>(new_img);                                                                                                                   // store in shared pointer
         if (data != nullptr)
             *data = *new_img; // copy to output
@@ -449,6 +461,23 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
     }
     cam->capturing = false;
     return;
+}
+
+const std::string CCameraUnit_ASI::GetUUID() const
+{
+    if (!init_ok)
+    {
+        return "";
+    }
+    ASI_ID id;
+    if (HasError(ASIGetID(cameraID, &id)))
+    {
+        CCAMERAUNIT_ASI_DBG_ERR("Failed to get camera ID");
+        return "";
+    }
+    char uuid[9] = {0,};
+    memcpy(uuid, id.id, 8);
+    return std::string(uuid);
 }
 
 const CImageData *CCameraUnit_ASI::GetLastImage() const
@@ -742,11 +771,11 @@ void CCameraUnit_ASI::SetBinningAndROI(int binX, int binY, int x_min, int x_max,
     binY = binX; // just to make sure
 
     // default values
-    if (x_max == 0)
+    if (x_max <= 0)
     {
         x_max = CCDWidth_;
     }
-    if (y_max == 0)
+    if (y_max <= 0)
     {
         y_max = CCDHeight_;
     }

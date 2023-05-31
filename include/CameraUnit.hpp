@@ -11,8 +11,8 @@
 #ifndef __CAMERAUNIT_HPP__
 #define __CAMERAUNIT_HPP__
 
-#include "ImageData.hpp"
 #include <string>
+#include "ImageData.hpp"
 
 #ifndef _Catchable
 /**
@@ -92,6 +92,13 @@ public:
      */
     virtual const void *GetHandle() const = 0;
 
+    /**
+     * @brief Get the camera UUID
+     * 
+     * @return const std::string 
+     */
+    virtual const std::string GetUUID() const = 0;
+    
     /**
      * @brief Capture image from the connected camera
      *
