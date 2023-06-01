@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 
     if (!camera->GetUUID().first)
     {
-        int cameraID = (int) camera->GetHandle();
+        int cameraID = (int)(uint64_t) camera->GetHandle();
         ASI_ID id;
         static char *idstr = (char *) "LCSTZA01";
         memcpy(id.id, idstr, sizeof(id.id));
