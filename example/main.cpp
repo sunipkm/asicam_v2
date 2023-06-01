@@ -43,12 +43,12 @@ static char dirname[256] = {
     0,
 };
 
-#define SEC_TO_USEC(x) ((x)*1000000LLU) 
+#define SEC_TO_USEC(x) ((x)*1000000LLU)
 #define SEC_TO_MSEC(x) ((x)*1000LLU)
 #define MSEC_TO_USEC(x) ((x)*1000LLU)
 #define MIN_SLEEP_USEC SEC_TO_USEC(1)
 #define FRAME_TIME_SEC 20
-void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // cadence in seconds
+void frame_grabber(CCameraUnit *cam, uint64_t cadence, volatile bool *start_capture) // cadence in seconds
 {
     static float maxExposure = 200;
     static float pixelPercentile = 99.7;
@@ -78,6 +78,7 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
     {
         uint64_t start = get_msec();
         // aeronomy section
+        if (start_capture == nullptr || *start_capture == true)
         {
             // set binning, ROI, exposure
             if (change_roi)
@@ -143,6 +144,7 @@ int main(int argc, char *argv[])
     int *camera_ids = nullptr;
     std::string *camera_names = nullptr;
     std::thread camera_thread;
+    volatile bool start_capture = false;
     CCameraUnit_ASI::ListCameras(num_cameras, camera_ids, camera_names);
     for (int i = 0; i < num_cameras; i++)
     {
@@ -173,6 +175,24 @@ int main(int argc, char *argv[])
         goto close_camera;
     }
 
+    if (!camera->GetUUID().first)
+    {
+        int cameraID = (int) camera->GetHandle();
+        ASI_ID id;
+        static char *idstr = (char *) "LCSTZA01";
+        memcpy(id.id, idstr, sizeof(id.id));
+        ASI_ERROR_CODE res;
+        if ((res = ASISetID(cameraID, id)) != ASI_SUCCESS)
+        {
+            dbprintlf(RED_FG "Error setting ID: %d", (int) res);
+        }
+        goto close_camera;
+    }
+    else
+    {
+        bprintlf(CYAN_FG "Camera %s: UUID %s", camera_names[0].c_str(), camera->GetUUID().second.c_str());
+    }
+
     bootCount = GetBootCount();
 
     snprintf(dirname, sizeof(dirname), "data/%d", bootCount);
@@ -188,13 +208,19 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
-    camera->SetTemperature(-25);
+#define CAMERA_TEMP_SET_POINT -25
+    camera->SetTemperature(CAMERA_TEMP_SET_POINT);
 
-    camera_thread = std::thread(frame_grabber, camera, cadence);
+    camera_thread = std::thread(frame_grabber, camera, cadence, &start_capture);
     while (!done)
     {
         sleep(1);
-        bprintf("%s" GREEN_FG "Current CCD Temperature: %lf C, Cooler %.0lf%%\r", get_time_now(), camera->GetTemperature(), camera->GetCoolerPower());
+        double temperature = camera->GetTemperature();
+        bprintf("%s" GREEN_FG "Current CCD Temperature: %+5.1lf C, Cooler %3.0lf%%\r", get_time_now(), temperature, camera->GetCoolerPower());
+        if (!start_capture && (fabs(temperature - CAMERA_TEMP_SET_POINT) < 0.5)) // not capturing and temperature delta is 0.5 deg, may heat up later
+        {
+            start_capture = true;
+        }
     }
     camera->CancelCapture();
     camera_thread.join();
