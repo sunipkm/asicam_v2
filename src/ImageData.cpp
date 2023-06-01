@@ -827,11 +827,15 @@ bool CImageData::SaveFits(bool syncOnWrite, const char *DirNamePrefix, const cha
     }
     // Get the file name
     std::string fname = "";
-    if (fileNameFormat == nullptr || strlen(fileNameFormat) == 0 || (std::string(fileNameFormat).find("%") == std::string::npos))
+    if (fileNameFormat == nullptr || strlen(fileNameFormat) == 0) // empty: use default
     {
         fname = string_format("%s_%llu", defaultFilePrefix, (unsigned long long)m_metadata.timestamp);
     }
-    else
+    else if (std::string(fileNameFormat).find("%") == std::string::npos) // does not contain %, use as prefix
+    {
+        fname = string_format("%s_%llu", fileNameFormat, (unsigned long long)m_metadata.timestamp);
+    }
+    else // is a format string
     {
         int sz = 256;
         bool cond = true;
