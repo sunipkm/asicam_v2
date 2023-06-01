@@ -30,11 +30,18 @@ typedef SSIZE_T ssize_t;
 #define _Nullable
 #endif
 
+#ifndef CIMAGEDATA_DBG_LVL
+/**
+ * @brief Debug level for CImageData. 0 = no debug, 1 = errors only, 2 = errors and warnings, 3 = errors, warnings and info
+ * 
+ */
+#define CIMAGEDATA_DBG_LVL 3
+#endif
+
 /**
  * @brief Image Data Statistics Storage Class
  *
  */
-
 class ImageStats
 {
     int min_;
@@ -79,22 +86,40 @@ public:
     double GetStandardDeviationValue() const { return stddev_; }
 };
 
+/**
+ * @brief Image metadata storage class.
+ * 
+ */
 class CImageMetadata
 {
 public:
-    double exposureTime;
-    int binX;
-    int binY;
-    int imgTop;
-    int imgLeft;
-    double temperature;
-    uint64_t timestamp;
-    std::string cameraName;
-    int64_t gain;
-    int64_t offset;
-    std::map<std::string, std::string> extendedMetadata;
+    double exposureTime; /*!< Exposure time in seconds */
+    int binX; /*!< X axis bin */
+    int binY; /*!< Y axis bin */
+    int imgTop; /*!< Top offset of image (binned coordinates) */
+    int imgLeft; /*!< Left offset of image (binned coordinates) */
+    double temperature; /*!< CCD temperature in degree C */
+    uint64_t timestamp; /*!< Timestamp since epoch in ms */
+    std::string cameraName; /*!< Camera name */
+    int64_t gain; /*!< Gain */
+    int64_t offset; /*!< Offset */
+    int minGain; /*!< Minimum gain */
+    int maxGain; /*!< Maximum gain */
+    std::map<std::string, std::string> extendedMetadata; /*!< Extended metadata */
 
+    /**
+     * @brief Print metadata to a stream.
+     * 
+     * @param stream Stream to print to. Defaults to stdout.
+     */
     void print(FILE *stream = stdout) const;
+
+    /**
+     * @brief Add an extended attribute to metadata.
+     * 
+     * @param key Metadata key
+     * @param value Metadata value
+     */
     inline void AddExtendedAttribute(std::string key, std::string value)
     {
         extendedMetadata[key] = value;
@@ -313,17 +338,13 @@ public:
     /**
      * @brief Save image contained in CImageData
      *
-     * @param filePrefix File name prefix
-     * @param DirPrefix Directory name
-     * @param filePrefixIsName If this variable is set, file name prefix will be treated as filename. The .fit extension needs not be supplied.
-     * @param i Image index
-     * @param n Out of n
-     * @param outString Status output string pointer
-     * @param outStringSz Status output string max size
+     * @param syncOnWrite Sync on write (write to disk immediately).
+     * @param DirNamePrefix Directory name prefix (if NULL, uses ./fits)
+     * @param fileNameFormat File name format. If NULL, uses <{@link CIMAGE_PREFIX_STRING}>_<timestamp>.fit. If not null and does not contain any '%' character, uses <fileNameFormat>_<timestamp>.fit. If the file exists, numbers are appended to the file name. Presence of a '%' character indicates that the file name format is a printf-style format string.
      * 
-     * @return bool true on success, negative on failure
+     * @return bool Returns true if successful, false otherwise.
      */
-    bool SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefix, bool filePrefixIsName = false, int i = -1, int n = -1, char *outString = NULL, ssize_t outStringSz = 0, bool syncOnWrite = false);
+    bool SaveFits(bool syncOnWrite, const char * _Nullable DirNamePrefix, const char *fileNameFormat, ...);
     /**
      * @brief Get the image height
      * 

@@ -81,14 +81,16 @@ public:
     /**
      * @brief Get the camera vendor (used to identify backend library)
      *
-     * @return const char* Camera vendor.
+     * @return const char* Camera vendor. Must be a string literal,
+     * preferably defined in the implementation file for the relevant backend.
      */
     virtual const char *GetVendor() const = 0;
 
     /**
-     * @brief Get the internal camera handle
+     * @brief Get the internal camera handle. This is backend specific.
+     * e.g. for ZWO ASI cameras, this is the camera ID.(int).
      *
-     * @return const void*
+     * @return const void* Internal camera handle (backend specific).
      */
     virtual const void *GetHandle() const = 0;
 
@@ -235,8 +237,16 @@ public:
      * @brief Open or close the shutter
      *
      * @param open
+     * @return bool Status of the shutter. True = open, False = closed
      */
-    virtual void SetShutterOpen(bool open) = 0;
+    virtual bool SetShutterOpen(bool open) = 0;
+
+    /**
+     * @brief Check if the shutter is open.
+     *
+     * @return bool Status of the shutter. True = open, False = closed
+     */
+    virtual bool GetShutterOpen() const = 0;
 
     /**
      * @brief Set the cooler target temperature

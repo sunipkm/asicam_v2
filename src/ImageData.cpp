@@ -10,22 +10,23 @@
  */
 #include "ImageData.hpp"
 
+#include <stdio.h>
 #include <math.h>
-#if !defined(OS_Windows)
 #include <string.h>
+#include <stdarg.h>
+#if !defined(OS_Windows)
 #include <unistd.h>
 #include <inttypes.h>
 #else
-#include <stdio.h>
 static inline void sync()
 {
     _flushall();
 }
 #endif
 #include "jpge.hpp"
-#include "meb_print.h"
 #include <fitsio.h>
 
+#include <vector>
 #include <algorithm>
 #include <chrono>
 #include <mutex>
@@ -46,9 +47,122 @@ static inline void sync()
 #endif
 #define CIMAGE_PROGNAME_STRING TOSTRING(CIMAGE_PROGNAME)
 
+#if !defined(OS_Windows)
+#define YELLOW_FG "\033[33m"
+#define RED_FG "\033[31m"
+#define CYAN_FG "\033[36m"
+#define RESET "\033[0m"
+#else
+#define YELLOW_FG
+#define RED_FG
+#define CYAN_FG
+#define RESET
+#endif
+
+#if (CIMAGEDATA_DBG_LVL >= 3)
+#define CIMAGEDATA_DBG_INFO(fmt, ...)                                                                   \
+    {                                                                                                        \
+        fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                      \
+    }
+#define CIMAGEDATA_DBG_INFO_NONL(fmt, ...)                                                         \
+    {                                                                                                   \
+        fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                 \
+    }
+#define CIMAGEDATA_DBG_INFO_NONE(fmt, ...)            \
+    {                                                      \
+        fprintf(stderr, CYAN_FG fmt RESET, ##__VA_ARGS__); \
+        fflush(stderr);                                    \
+    }
+#else
+#define CIMAGEDATA_DBG_INFO(fmt, ...)
+#define CIMAGEDATA_DBG_INFO_NONL(fmt, ...)
+#define CIMAGEDATA_DBG_INFO_NONE(fmt, ...)
+#endif
+
+#if (CIMAGEDATA_DBG_LVL >= 2)
+#define CIMAGEDATA_DBG_WARN(fmt, ...)                                                                     \
+    {                                                                                                          \
+        fprintf(stderr, "%s:%d:%s(): " YELLOW_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                        \
+    }
+#define CIMAGEDATA_DBG_WARN_NONL(fmt, ...)                                           \
+    {                                                                                     \
+        fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                   \
+    }
+#define CIMAGEDATA_DBG_WARN_NONE(fmt, ...) \
+    {                                           \
+        fprintf(stderr, fmt, ##__VA_ARGS__);    \
+        fflush(stderr);                         \
+    }
+#else
+#define CIMAGEDATA_DBG_WARN(fmt, ...)
+#define CIMAGEDATA_DBG_WARN_NONL(fmt, ...)
+#define CIMAGEDATA_DBG_WARN_NONE(fmt, ...)
+#endif
+
+#if (CIMAGEDATA_DBG_LVL >= 1)
+#define CIMAGEDATA_DBG_ERR(fmt, ...)                                                                   \
+    {                                                                                                       \
+        fprintf(stderr, "%s:%d:%s(): " RED_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        fflush(stderr);                                                                                     \
+    }
+#else
+#define CIMAGEDATA_DBG_ERR(fmt, ...)
+#endif
+
 static inline uint64_t getTime()
 {
     return ((std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now())).time_since_epoch())).count());
+}
+
+bool string_format(std::string &out, int &size, const char *fmt, va_list ap)
+{
+    std::vector<char> str(size, '\0');
+    auto n = vsnprintf(str.data(), str.size(), fmt, ap);
+    if ((n > -1) && (size_t(n) < str.size()))
+    {
+        out = str.data();
+        return true;
+    }
+    if (n > -1)
+    {
+        size = n + 1;
+        return false;
+    }
+    else
+    {
+        size = str.size() * 2;
+        return false;
+    }
+    return false;
+}
+
+std::string string_format(const char *fmt, ...)
+{
+    std::vector<char> str(256, '\0');
+    va_list ap;
+    while (1)
+    {
+        va_start(ap, fmt);
+        auto n = vsnprintf(str.data(), str.size(), fmt, ap);
+        va_end(ap);
+        if ((n > -1) && (size_t(n) < str.size()))
+        {
+            return str.data();
+        }
+        if (n > -1)
+        {
+            str.resize(n + 1);
+        }
+        else
+        {
+            str.resize(str.size() * 2);
+        }
+    }
+    return str.data();
 }
 
 void CImageMetadata::print(FILE *stream) const
@@ -58,7 +172,7 @@ void CImageMetadata::print(FILE *stream) const
     fprintf(stream, "Image Bin: %d x %d\n", binX, binY);
     fprintf(stream, "Image origin: %d x %d\n", imgLeft, imgTop);
     fprintf(stream, "Exposure: %.6lf s\n", exposureTime);
-    fprintf(stream, "Gain: %" PRId64", Offset: %" PRId64 "\n", gain, offset);
+    fprintf(stream, "Gain: %" PRId64 ", Offset: %" PRId64 "\n", gain, offset);
     fprintf(stream, "Temperature: %.2lf C\n", temperature);
     for (auto iter = extendedMetadata.begin(); iter != extendedMetadata.end(); iter++)
     {
@@ -530,7 +644,7 @@ void CImageData::ConvertJPEG()
     // JPEG compression and image update
     if (!jpge::compress_image_to_jpeg_file_in_memory(m_jpegData, sz_jpegData, m_imageWidth, m_imageHeight, 3, data, params))
     {
-        dbprintlf(FATAL "Failed to compress image to jpeg in memory\n");
+        CIMAGEDATA_DBG_ERR("Failed to compress image to jpeg in memory");
     }
     delete[] data;
 }
@@ -675,52 +789,90 @@ bool CImageData::FindOptimumExposure(float &targetExposure, float percentilePixe
 #define DIR_DELIM "\\"
 #endif
 
-bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefix, bool filePrefixIsName, int i, int n, char *outString, ssize_t outStringSz, bool syncOnWrite)
+#include "utilities.h"
+
+bool CImageData::SaveFits(bool syncOnWrite, const char *DirNamePrefix, const char *fileNameFormat, ...)
 {
-    std::lock_guard< std::mutex > lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
     static char defaultFilePrefix[] = CIMAGE_PREFIX_STRING;
     static char defaultDirPrefix[] = "." DIR_DELIM "fits" DIR_DELIM;
-    if ((filePrefix == NULL) || (strlen(filePrefix) == 0))
-        filePrefix = defaultFilePrefix;
-    if ((DirPrefix == NULL) || (strlen(DirPrefix) == 0))
-        DirPrefix = defaultDirPrefix;
-    char fileName[256];
-    char *fileName_s;
-    fitsfile *fptr;
-    int status = 0, bitpix = USHORT_IMG, naxis = 2;
-    int bzero = 32768, bscale = 1;
-    long naxes[2] = {(long)(m_imageWidth), (long)(m_imageHeight)};
-    unsigned int exposureTime = m_metadata.exposureTime * 1000000U;
-    if (!filePrefixIsName)
+    char *DirPrefix = nullptr;
+    if ((DirNamePrefix == nullptr) || (strlen(DirNamePrefix) == 0))
+        DirNamePrefix = defaultDirPrefix;
+    else
+        DirPrefix = (char *)DirNamePrefix;
+    // Default case: need to make directory if does not exist
+    if (std::string(defaultDirPrefix) == std::string(DirPrefix))
     {
-        if (n > 0)
+        // Check if directory exists
+        if (file_exists(DirPrefix))
         {
-            if (_snprintf(fileName, sizeof(fileName), "%s" DIR_DELIM "%s_%ums_%d_%d_%llu.fit", DirPrefix, filePrefix, exposureTime, i, n, (unsigned long long) m_metadata.timestamp) > (int)sizeof(fileName))
-                goto print_err;
+            CIMAGEDATA_DBG_ERR("Directory %s is a FILE!", DirPrefix)
+            return false;
         }
-        else
+        if (!dir_exists(DirPrefix))
         {
-            if (_snprintf(fileName, sizeof(fileName), "%s" DIR_DELIM "%s_%ums_%llu.fit", DirPrefix, filePrefix, exposureTime, (unsigned long long) m_metadata.timestamp) > (int)sizeof(fileName))
-                goto print_err;
+            int err;
+#if !defined(OS_Windows)
+            err = mkdir(DirPrefix, 0764);
+#else
+            err = mkdir(DirPrefix);
+#endif
+            if (err != 0)
+            {
+                CIMAGEDATA_DBG_ERR("Could not create directory %s", DirPrefix)
+                return false;
+            }
         }
+    }
+    // Get the file name
+    std::string fname = "";
+    if (fileNameFormat == nullptr || strlen(fileNameFormat) == 0 || (std::string(fileNameFormat).find("%") == std::string::npos))
+    {
+        fname = string_format("%s_%llu", defaultFilePrefix, (unsigned long long)m_metadata.timestamp);
     }
     else
     {
-        if (n > 0)
+        int sz = 256;
+        bool cond = true;
+        va_list ap;
+        do
         {
-            dbprintlf(FATAL "Saving snapshots is not allowed with provided file name");
+            va_start(ap, fileNameFormat);
+            if (string_format(fname, sz, fileNameFormat, ap))
+            {
+                cond = false;
+            }
+            va_end(ap);
+        } while (cond);
+    }
+    // Get the full file name
+    std::string full_name_base = string_format("%s" DIR_DELIM "%s", DirPrefix, fname.c_str());
+    std::string full_name = full_name_base.c_str(); // make a copy
+    int ctr = 0;
+    // Check if the file exists
+    do
+    {
+        FILE *fp = fopen(full_name.c_str(), "r");
+        if (fp != NULL)
+        {
+            fclose(fp);
+            full_name = string_format("%s_%d", full_name_base.c_str(), ++ctr);
         }
         else
         {
-            if (_snprintf(fileName, sizeof(fileName), "%s" DIR_DELIM "%s.fit", DirPrefix, filePrefix) > (int)sizeof(fileName))
-                goto print_err;
+            break;
         }
-    }
+    } while (true);
 
-    unlink(fileName);
-    fileName_s = new char[strlen(fileName) + 16];
-    _snprintf(fileName_s, strlen(fileName) + 16, "%s[compress]", fileName);
-    if (!fits_create_file(&fptr, fileName_s, &status))
+    full_name = full_name.append(".fits[compress]"); // append the format
+
+    fitsfile *fptr;
+    int status = 0, bitpix = USHORT_IMG, naxis = 2;
+    long naxes[2] = {(long)(m_imageWidth), (long)(m_imageHeight)};
+    unsigned int exposureTime = m_metadata.exposureTime * 1000000U;
+
+    if (!fits_create_file(&fptr, full_name.c_str(), &status))
     {
         fits_create_img(fptr, bitpix, naxis, naxes, &status);
         fits_write_key(fptr, TSTRING, "PROGRAM", (void *)CIMAGE_PROGNAME_STRING, NULL, &status);
@@ -728,10 +880,14 @@ bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefi
         fits_write_key(fptr, TLONGLONG, "TIMESTAMP", &(m_metadata.timestamp), NULL, &status);
         fits_write_key(fptr, TFLOAT, "CCDTEMP", &(m_metadata.temperature), NULL, &status);
         fits_write_key(fptr, TUINT, "EXPOSURE_US", &(exposureTime), NULL, &status);
-        fits_write_key(fptr, TUINT, "OFFSET_X", &(m_metadata.imgLeft), NULL, &status);
-        fits_write_key(fptr, TUINT, "OFFSET_Y", &(m_metadata.imgTop), NULL, &status);
+        fits_write_key(fptr, TUINT, "ORIGIN_X", &(m_metadata.imgLeft), NULL, &status);
+        fits_write_key(fptr, TUINT, "ORIGIN_Y", &(m_metadata.imgTop), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINX", &(m_metadata.binX), NULL, &status);
         fits_write_key(fptr, TUSHORT, "BINY", &(m_metadata.binY), NULL, &status);
+        fits_write_key(fptr, TLONGLONG, "GAIN", &(m_metadata.gain), NULL, &status);
+        fits_write_key(fptr, TLONGLONG, "OFFSET", &(m_metadata.offset), NULL, &status);
+        fits_write_key(fptr, TINT, "GAIN_MIN", &(m_metadata.minGain), NULL, &status);
+        fits_write_key(fptr, TINT, "GAIN_MAX", &(m_metadata.maxGain), NULL, &status);
 
         for (auto iter = m_metadata.extendedMetadata.begin(); iter != m_metadata.extendedMetadata.end(); iter++)
         {
@@ -745,23 +901,11 @@ bool CImageData::SaveFits(char * _Nullable filePrefix, char * _Nullable DirPrefi
         {
             sync();
         }
-        if (outString != NULL && outStringSz > 0)
-        {
-            _snprintf(outString, outStringSz, "wrote %d of %d", i, n);
-        }
-        delete[] fileName_s;
         return true;
     }
     else
     {
-        dbprintlf(FATAL "Could not create file %s", fileName_s);
-    }
-    delete[] fileName_s;
-    return false;
-print_err:
-    if (outString != NULL && outStringSz > 0)
-    {
-        _snprintf(outString, outStringSz, "failed %d of %d", i, n);
+        CIMAGEDATA_DBG_ERR("Could not create file %s", full_name.c_str());
     }
     return false;
 }

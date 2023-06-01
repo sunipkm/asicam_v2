@@ -371,7 +371,7 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         cam->status_ = "Last exposure attempt failed, restarting exposure";
     }
     uint64_t start_time = getTime();
-    if (HasError(ASIStartExposure(cam->cameraID, ASI_FALSE)))
+    if (HasError(ASIStartExposure(cam->cameraID, cam->isDarkFrame ? ASI_TRUE : ASI_FALSE)))
     {
         cam->status_ = "Failed to start exposure";
         cam->capturing = false;
@@ -437,8 +437,10 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
         metadata.imgTop = imgtop;
         metadata.gain = cam->GetGainRaw();
         metadata.offset = cam->GetOffset();
+        metadata.minGain = cam->GetMinGain();
+        metadata.maxGain = cam->GetMaxGain();
         CImageData *new_img = new CImageData(iwid, ihei, dataptr, metadata); // create new image data object
-        cam->image_data = std::shared_ptr<CImageData>(new_img);                                                                                                                   // store in shared pointer
+        cam->image_data = std::shared_ptr<CImageData>(new_img);              // store in shared pointer
         if (data != nullptr)
             *data = *new_img; // copy to output
         delete[] dataptr;
@@ -469,13 +471,20 @@ const std::string CCameraUnit_ASI::GetUUID() const
     {
         return "";
     }
+    if (!isUSB3)
+    {
+        CCAMERAUNIT_ASI_DBG_WARN("Only USB3 ZWO ASI Cameras have UUIDs");
+        return "";
+    }
     ASI_ID id;
     if (HasError(ASIGetID(cameraID, &id)))
     {
         CCAMERAUNIT_ASI_DBG_ERR("Failed to get camera ID");
         return "";
     }
-    char uuid[9] = {0,};
+    char uuid[9] = {
+        0,
+    };
     memcpy(uuid, id.id, 8);
     return std::string(uuid);
 }
@@ -640,17 +649,51 @@ void CCameraUnit_ASI::SetExposure(double exposureInSeconds)
     }
 }
 
+bool CCameraUnit_ASI::SetShutterOpen(bool open)
+{
+    if (!init_ok)
+    {
+        return true;
+    }
+    if (!hasShutter)
+    {
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().c_str());
+        return true;
+    }
+    isDarkFrame = !open;
+    return GetShutterOpen();
+}
+
+bool CCameraUnit_ASI::GetShutterOpen() const
+{
+    if (!init_ok)
+    {
+        return true;
+    }
+    if (!hasShutter)
+    {
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().c_str());
+        return true;
+    }
+    return !isDarkFrame;
+}
+
 void CCameraUnit_ASI::SetTemperature(double temperatureInCelcius)
 {
     if (!init_ok)
     {
         return;
     }
+    if (!hasCooler)
+    {
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have cooler", cam_name, GetUUID().c_str());
+        return;
+    }
     if (temperatureInCelcius < -80)
     {
         return;
     }
-    long tempval = (long) temperatureInCelcius;
+    long tempval = (long)temperatureInCelcius;
     CCAMERAUNIT_ASI_DBG_INFO("Setting temperature to %lf -> %ld C", temperatureInCelcius, tempval);
     if (!HasError(ASISetControlValue(cameraID, ASI_TARGET_TEMP, tempval, ASI_FALSE)))
     {
@@ -662,13 +705,14 @@ void CCameraUnit_ASI::SetTemperature(double temperatureInCelcius)
         CCAMERAUNIT_ASI_DBG_WARN("Failed to set temperature");
         return;
     }
-    if (CCAMERAUNIT_ASI_DBG_LVL >= 3)
+#if (CCAMERAUNIT_ASI_DBG_LVL >= 3)
     {
         long val;
         ASI_BOOL bAuto;
         ASIGetControlValue(cameraID, ASI_TARGET_TEMP, &val, &bAuto);
         CCAMERAUNIT_ASI_DBG_INFO("Target temperature is %ld C", val);
     }
+#endif
     if (!HasError(ASISetControlValue(cameraID, ASI_COOLER_ON, 1, ASI_FALSE)))
     {
         status_ = "Cooler on";

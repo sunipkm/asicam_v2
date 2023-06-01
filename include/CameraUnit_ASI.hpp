@@ -15,7 +15,7 @@
 #include "CameraUnit.hpp"
 #include "ASICamera2.h"
 
-#define LIBVENDOR "ZWO ASI"
+#define LIBVENDOR "ZWO_ASI"
 
 #include <atomic>
 #include <thread>
@@ -65,6 +65,8 @@ private:
     bool isUSB3 = true;
     bool is8bitonly = false;
 
+    bool isDarkFrame = false;
+
     double minExposure = 0;
     double maxExposure = 0;
     long minGain = 0;
@@ -109,7 +111,8 @@ public:
     const double GetMaxExposure() const { return maxExposure; };
     const float GetMinGain() const { return 0; };
     const float GetMaxGain() const { return 100; };
-    inline void _NotImplemented SetShutterOpen(bool open) { return; };
+    bool SetShutterOpen(bool open);
+    bool GetShutterOpen() const;
     void SetTemperature(double temperatureInCelcius);
     double GetTemperature() const;
     double GetCoolerPower() const;

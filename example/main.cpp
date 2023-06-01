@@ -91,7 +91,7 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence = FRAME_TIME_SEC) // caden
                 cam->SetExposure(exposure_1);
             }
             CImageData img = cam->CaptureImage(); // capture frame
-            if (!img.SaveFits((char *)"comics", dirname))     // save frame
+            if (!img.SaveFits(true, (char const*)dirname, (char const*)"comics_%llu", start))     // save frame
             {
                 bprintlf(FATAL "[%" PRIu64 "] AERO: Could not save FITS", start);
             }
