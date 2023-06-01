@@ -26,7 +26,6 @@ endif
 
 EDLDFLAGS += -lm -lpthread -lcfitsio -lusb-1.0 $(shell pkg-config --libs cfitsio) $(LDFLAGS)
 
-
 LIBASISTATIC = $(LIBASIDIR)/libASICamera2.a
 
 LIBTARGET = lib/libCameraUnit_ASI.a
@@ -52,6 +51,20 @@ ALL_OBJS := $(COBJS) $(CCOBJS) $(CXXOBJS)
 
 
 all: $(LIBTARGET) $(CXXEXEOBJS) testprog
+
+install: $(LIBTARGET) $(LIBASISTATIC)
+	mkdir -p /usr/local/include/CameraUnit
+	cp -v include/CameraUnit*.hpp /usr/local/include/CameraUnit
+	cp -v include/ImageData.hpp /usr/local/include/CameraUnit
+	cp -v include/ASICamera2.h /usr/local/include/CameraUnit
+	mkdir -p /usr/local/lib
+	cp -v $(LIBTARGET) /usr/local/lib/
+	cp -v $(LIBASISTATIC) /usr/local/lib/
+
+uninstall:
+	rm -vrf /usr/local/include/CameraUnit
+	rm -vf /usr/local/lib/$(notdir $(LIBTARGET))
+	rm -vf /usr/local/lib/$(notdir $(LIBASISTATIC))
 
 testprog: $(CXXEXEOBJS) $(LIBTARGET) $(LIBASISTATIC)
 	$(CXX) -o $@ $^ $(LIBTARGET) $(EDLDFLAGS)
