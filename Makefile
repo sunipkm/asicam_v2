@@ -3,8 +3,7 @@ CXX = g++
 
 EDCFLAGS := -O2 -Wall -I include/ $(shell pkg-config --cflags cfitsio) $(CFLAGS)
 EDCXXFLAGS := -O2 -Wall -I include/ -std=c++11 -fPIC $(shell pkg-config --cflags cfitsio) $(CXXFLAGS)
-EDLDFLAGS := -lm -lpthread -lcfitsio -lusb-1.0 -latomic $(shell pkg-config --libs cfitsio) $(LDFLAGS)
-
+EDLDFLAGS := -latomic
 LIBASIDIR = lib/armv7/
 ifeq ($(OS), Windows_NT)
 	$(error Windows is not supported.)
@@ -21,8 +20,12 @@ else
 	endif
 	ifeq ($(UNAME_S), Darwin)
 		LIBASIDIR = lib/mac/
+		EDLDFLAGS = 
 	endif
 endif
+
+EDLDFLAGS += -lm -lpthread -lcfitsio -lusb-1.0 $(shell pkg-config --libs cfitsio) $(LDFLAGS)
+
 
 LIBASISTATIC = $(LIBASIDIR)/libASICamera2.a
 
