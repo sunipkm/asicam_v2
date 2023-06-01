@@ -97,9 +97,9 @@ public:
     /**
      * @brief Get the camera UUID
      * 
-     * @return const std::string 
+     * @return const std::pair<bool, std::string> UUID. First element is true if UUID is valid, false otherwise. Second element is the UUID string.
      */
-    virtual const std::string GetUUID() const = 0;
+    virtual const std::pair<bool, std::string> GetUUID() const = 0;
     
     /**
      * @brief Capture image from the connected camera

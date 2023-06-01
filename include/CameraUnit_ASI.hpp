@@ -88,7 +88,7 @@ public:
     _Catchable CCameraUnit_ASI(int cameraID);
     ~CCameraUnit_ASI();
 
-    const std::string GetUUID() const;
+    const std::pair<bool, std::string> GetUUID() const;
     inline const char *GetVendor() const { return vendor; }
     const void *GetHandle() const { return (void *)(uintptr_t) cameraID; }
 

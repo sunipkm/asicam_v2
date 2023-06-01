@@ -465,28 +465,28 @@ void CCameraUnit_ASI::CaptureThread(CCameraUnit_ASI *cam, CImageData *data, CCam
     return;
 }
 
-const std::string CCameraUnit_ASI::GetUUID() const
+const std::pair<bool, std::string> CCameraUnit_ASI::GetUUID() const
 {
     if (!init_ok)
     {
-        return "";
+        return std::pair<bool, std::string>(false, "");
     }
     if (!isUSB3)
     {
         CCAMERAUNIT_ASI_DBG_WARN("Only USB3 ZWO ASI Cameras have UUIDs");
-        return "";
+        return std::pair<bool, std::string>(false, "");
     }
     ASI_ID id;
     if (HasError(ASIGetID(cameraID, &id)))
     {
         CCAMERAUNIT_ASI_DBG_ERR("Failed to get camera ID");
-        return "";
+        return std::pair<bool, std::string>(false, "");
     }
     char uuid[9] = {
         0,
     };
     memcpy(uuid, id.id, 8);
-    return std::string(uuid);
+    return std::pair<bool, std::string>(true, uuid);
 }
 
 const CImageData *CCameraUnit_ASI::GetLastImage() const
@@ -657,7 +657,7 @@ bool CCameraUnit_ASI::SetShutterOpen(bool open)
     }
     if (!hasShutter)
     {
-        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().c_str());
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().second.c_str());
         return true;
     }
     isDarkFrame = !open;
@@ -672,7 +672,7 @@ bool CCameraUnit_ASI::GetShutterOpen() const
     }
     if (!hasShutter)
     {
-        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().c_str());
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have shutter", cam_name, GetUUID().second.c_str());
         return true;
     }
     return !isDarkFrame;
@@ -686,7 +686,7 @@ void CCameraUnit_ASI::SetTemperature(double temperatureInCelcius)
     }
     if (!hasCooler)
     {
-        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have cooler", cam_name, GetUUID().c_str());
+        CCAMERAUNIT_ASI_DBG_WARN("Camera %s (%s): Does not have cooler", cam_name, GetUUID().second.c_str());
         return;
     }
     if (temperatureInCelcius < -80)
