@@ -794,7 +794,7 @@ bool CImageData::FindOptimumExposure(float &targetExposure, float percentilePixe
 #endif
 
 #include "utilities.h"
-bool CImageData::SaveFITS(bool syncOnWrite, const char *DirNamePrefix, FORMAT_STRING(const char *fileNameFormat), ...)
+bool CImageData::SaveFITS(bool syncOnWrite, const char *DirNamePrefix, const char *fileNameFormat, ...)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     static char defaultFilePrefix[] = CIMAGE_PREFIX_STRING;
