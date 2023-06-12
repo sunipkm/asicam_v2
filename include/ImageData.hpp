@@ -349,7 +349,7 @@ public:
      * @return bool Returns true.
      */
     bool FindOptimumExposure(float &targetExposure, float percentilePixel = 80, int pixelTarget = 40000, float maxAllowedExposure = 10.0, int numPixelExclusion = 100, int pixelTargetUncertainty = 5000);
-#if defined(__GNUC__) || defined(__clang__)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_DOXYGEN_)
     __attribute__((__format__(__printf__, 4, 5)))
 #endif
     /**
