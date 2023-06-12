@@ -140,7 +140,21 @@ bool string_format(std::string &out, int &size, const char *fmt, va_list ap)
     return false;
 }
 
-std::string string_format(const char *fmt, ...)
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+# include <sal.h>
+# if _MSC_VER > 1400
+#  define FORMAT_STRING(p) _Printf_format_string_ p
+# else
+#  define FORMAT_STRING(p) __format_string p
+# endif /* FORMAT_STRING */
+#else
+# define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((__format__(__printf__, 1, 2)))
+#endif
+std::string string_format(FORMAT_STRING(const char *fmt), ...)
 {
     std::vector<char> str(256, '\0');
     va_list ap;
