@@ -60,17 +60,17 @@ static inline void sync()
 #endif
 
 #if (CIMAGEDATA_DBG_LVL >= 3)
-#define CIMAGEDATA_DBG_INFO(fmt, ...)                                                                   \
+#define CIMAGEDATA_DBG_INFO(fmt, ...)                                                                        \
     {                                                                                                        \
         fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                      \
     }
-#define CIMAGEDATA_DBG_INFO_NONL(fmt, ...)                                                         \
+#define CIMAGEDATA_DBG_INFO_NONL(fmt, ...)                                                              \
     {                                                                                                   \
         fprintf(stderr, "%s:%d:%s(): " CYAN_FG fmt RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                 \
     }
-#define CIMAGEDATA_DBG_INFO_NONE(fmt, ...)            \
+#define CIMAGEDATA_DBG_INFO_NONE(fmt, ...)                 \
     {                                                      \
         fprintf(stderr, CYAN_FG fmt RESET, ##__VA_ARGS__); \
         fflush(stderr);                                    \
@@ -82,20 +82,20 @@ static inline void sync()
 #endif
 
 #if (CIMAGEDATA_DBG_LVL >= 2)
-#define CIMAGEDATA_DBG_WARN(fmt, ...)                                                                     \
+#define CIMAGEDATA_DBG_WARN(fmt, ...)                                                                          \
     {                                                                                                          \
         fprintf(stderr, "%s:%d:%s(): " YELLOW_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                        \
     }
-#define CIMAGEDATA_DBG_WARN_NONL(fmt, ...)                                           \
+#define CIMAGEDATA_DBG_WARN_NONL(fmt, ...)                                                \
     {                                                                                     \
         fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                   \
     }
-#define CIMAGEDATA_DBG_WARN_NONE(fmt, ...) \
-    {                                           \
-        fprintf(stderr, fmt, ##__VA_ARGS__);    \
-        fflush(stderr);                         \
+#define CIMAGEDATA_DBG_WARN_NONE(fmt, ...)   \
+    {                                        \
+        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fflush(stderr);                      \
     }
 #else
 #define CIMAGEDATA_DBG_WARN(fmt, ...)
@@ -104,7 +104,7 @@ static inline void sync()
 #endif
 
 #if (CIMAGEDATA_DBG_LVL >= 1)
-#define CIMAGEDATA_DBG_ERR(fmt, ...)                                                                   \
+#define CIMAGEDATA_DBG_ERR(fmt, ...)                                                                        \
     {                                                                                                       \
         fprintf(stderr, "%s:%d:%s(): " RED_FG fmt "\n" RESET, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
         fflush(stderr);                                                                                     \
@@ -140,21 +140,11 @@ bool string_format(std::string &out, int &size, const char *fmt, va_list ap)
     return false;
 }
 
-#undef FORMAT_STRING
-#if _MSC_VER >= 1400
-# include <sal.h>
-# if _MSC_VER > 1400
-#  define FORMAT_STRING(p) _Printf_format_string_ p
-# else
-#  define FORMAT_STRING(p) __format_string p
-# endif /* FORMAT_STRING */
-#else
-# define FORMAT_STRING(p) p
-#endif /* _MSC_VER */
 #if defined(__GNUC__) || defined(__clang__)
 __attribute__((__format__(__printf__, 1, 2)))
 #endif
-std::string string_format(FORMAT_STRING(const char *fmt), ...)
+std::string
+string_format(FORMAT_STRING(const char *fmt), ...)
 {
     std::vector<char> str(256, '\0');
     va_list ap;
@@ -804,8 +794,7 @@ bool CImageData::FindOptimumExposure(float &targetExposure, float percentilePixe
 #endif
 
 #include "utilities.h"
-
-bool CImageData::SaveFits(bool syncOnWrite, const char *DirNamePrefix, const char *fileNameFormat, ...)
+bool CImageData::SaveFITS(bool syncOnWrite, const char *DirNamePrefix, FORMAT_STRING(const char *fileNameFormat), ...)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     static char defaultFilePrefix[] = CIMAGE_PREFIX_STRING;
