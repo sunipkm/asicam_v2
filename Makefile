@@ -1,5 +1,5 @@
-CC = gcc
-CXX = g++
+CC ?= gcc
+CXX ?= g++
 
 EDCFLAGS := -O2 -Wall -I include/ $(shell pkg-config --cflags cfitsio) $(CFLAGS)
 EDCXXFLAGS := -O2 -Wall -I include/ -std=c++11 -fPIC $(shell pkg-config --cflags cfitsio) $(CXXFLAGS)
