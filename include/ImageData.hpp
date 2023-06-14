@@ -25,7 +25,7 @@ typedef SSIZE_T ssize_t;
 #ifndef _Nullable
 /**
  * @brief Indicate the pointer can be set to null safely.
- * 
+ *
  */
 #define _Nullable
 #endif
@@ -33,10 +33,24 @@ typedef SSIZE_T ssize_t;
 #ifndef CIMAGEDATA_DBG_LVL
 /**
  * @brief Debug level for CImageData. 0 = no debug, 1 = errors only, 2 = errors and warnings, 3 = errors, warnings and info
- * 
+ *
  */
 #define CIMAGEDATA_DBG_LVL 3
 #endif
+
+#ifndef _DOXYGEN_
+#undef FORMAT_STRING
+#if _MSC_VER >= 1400
+#include <sal.h>
+#if _MSC_VER > 1400
+#define FORMAT_STRING(p) _Printf_format_string_ p
+#else
+#define FORMAT_STRING(p) __format_string p
+#endif /* FORMAT_STRING */
+#else
+#define FORMAT_STRING(p) p
+#endif /* _MSC_VER */
+#endif /* _DOXYGEN_ */
 
 /**
  * @brief Image Data Statistics Storage Class
@@ -88,35 +102,35 @@ public:
 
 /**
  * @brief Image metadata storage class.
- * 
+ *
  */
 class CImageMetadata
 {
 public:
-    double exposureTime; /*!< Exposure time in seconds */
-    int binX; /*!< X axis bin */
-    int binY; /*!< Y axis bin */
-    int imgTop; /*!< Top offset of image (binned coordinates) */
-    int imgLeft; /*!< Left offset of image (binned coordinates) */
-    double temperature; /*!< CCD temperature in degree C */
-    uint64_t timestamp; /*!< Timestamp since epoch in ms */
-    std::string cameraName; /*!< Camera name */
-    int64_t gain; /*!< Gain */
-    int64_t offset; /*!< Offset */
-    int minGain; /*!< Minimum gain */
-    int maxGain; /*!< Maximum gain */
+    double exposureTime;                                 /*!< Exposure time in seconds */
+    int binX;                                            /*!< X axis bin */
+    int binY;                                            /*!< Y axis bin */
+    int imgTop;                                          /*!< Top offset of image (binned coordinates) */
+    int imgLeft;                                         /*!< Left offset of image (binned coordinates) */
+    double temperature;                                  /*!< CCD temperature in degree C */
+    uint64_t timestamp;                                  /*!< Timestamp since epoch in ms */
+    std::string cameraName;                              /*!< Camera name */
+    int64_t gain;                                        /*!< Gain */
+    int64_t offset;                                      /*!< Offset */
+    int minGain;                                         /*!< Minimum gain */
+    int maxGain;                                         /*!< Maximum gain */
     std::map<std::string, std::string> extendedMetadata; /*!< Extended metadata */
 
     /**
      * @brief Print metadata to a stream.
-     * 
+     *
      * @param stream Stream to print to. Defaults to stdout.
      */
     void print(FILE *stream = stdout) const;
 
     /**
      * @brief Add an extended attribute to metadata.
-     * 
+     *
      * @param key Metadata key
      * @param value Metadata value
      */
@@ -197,7 +211,7 @@ public:
 
     /**
      * @brief Get the metadata associated with the current image.
-     * 
+     *
      * @return CImageMetadata Image metadata.
      */
     inline CImageMetadata GetImageMetadata() const { return m_metadata; }
@@ -230,7 +244,7 @@ public:
     void SetImageMetadata(CImageMetadata metadata);
     /**
      * @brief Set the extended metadata info
-     * 
+     *
      * @param key String key
      * @param value String value
      */
@@ -335,64 +349,67 @@ public:
      * @return bool Returns true.
      */
     bool FindOptimumExposure(float &targetExposure, float percentilePixel = 80, int pixelTarget = 40000, float maxAllowedExposure = 10.0, int numPixelExclusion = 100, int pixelTargetUncertainty = 5000);
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(_DOXYGEN_)
+    __attribute__((__format__(__printf__, 4, 5)))
+#endif
     /**
      * @brief Save image contained in CImageData
      *
      * @param syncOnWrite Sync on write (write to disk immediately).
      * @param DirNamePrefix Directory name prefix (if NULL, uses ./fits)
      * @param fileNameFormat File name format. If NULL, uses <{@link CIMAGE_PREFIX_STRING}>_<timestamp>.fit. If not null and does not contain any '%' character, uses <fileNameFormat>_<timestamp>.fit. If the file exists, numbers are appended to the file name. Presence of a '%' character indicates that the file name format is a printf-style format string.
-     * 
+     *
      * @return bool Returns true if successful, false otherwise.
      */
-    bool SaveFits(bool syncOnWrite, const char * _Nullable DirNamePrefix, const char *fileNameFormat, ...);
+    bool SaveFITS(bool syncOnWrite, const char *_Nullable DirNamePrefix, FORMAT_STRING(const char *fileNameFormat), ...);
     /**
      * @brief Get the image height
-     * 
+     *
      * @return int Image height in pixels
      */
-    inline int GetImageHeight() const {return m_imageHeight;}
+    inline int GetImageHeight() const { return m_imageHeight; }
     /**
      * @brief Get the image width
-     * 
+     *
      * @return int Image width in pixels
      */
-    inline int GetImageWidth() const {return m_imageWidth;}
+    inline int GetImageWidth() const { return m_imageWidth; }
     /**
      * @brief Get the image exposure
-     * 
+     *
      * @return float Exposure in seconds
      */
-    inline float GetExposure() const {return m_metadata.exposureTime;}
+    inline float GetExposure() const { return m_metadata.exposureTime; }
     /**
      * @brief Get the X axis (width) binning
-     * 
-     * @return int 
+     *
+     * @return int
      */
-    inline int GetBinX() const {return m_metadata.binX;}
+    inline int GetBinX() const { return m_metadata.binX; }
     /**
      * @brief Get the Y axis (height) binning
-     * 
-     * @return int 
+     *
+     * @return int
      */
-    inline int GetBinY() const {return m_metadata.binY;}
+    inline int GetBinY() const { return m_metadata.binY; }
     /**
      * @brief Get the CCD Temperature
-     * 
+     *
      * @return float Temperature in degree C
      */
-    inline float GetTemperature() const {return m_metadata.temperature;}
+    inline float GetTemperature() const { return m_metadata.temperature; }
     /**
      * @brief Get the timestamp of image
-     * 
+     *
      * @return uint64_t Timestamp since epoch in ms
      */
-    inline uint64_t GetTimestamp() const {return m_metadata.timestamp;}
+    inline uint64_t GetTimestamp() const { return m_metadata.timestamp; }
     /**
      * @brief Get the camera name string
-     * 
-     * @return std::string 
+     *
+     * @return std::string
      */
-    inline std::string GetCameraName() const {return m_metadata.cameraName;}
+    inline std::string GetCameraName() const { return m_metadata.cameraName; }
 
 private:
     /**
