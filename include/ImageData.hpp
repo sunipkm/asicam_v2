@@ -112,7 +112,7 @@ public:
     int binY;                                            /*!< Y axis bin */
     int imgTop;                                          /*!< Top offset of image (binned coordinates) */
     int imgLeft;                                         /*!< Left offset of image (binned coordinates) */
-    double temperature;                                  /*!< CCD temperature in degree C */
+    float temperature;                                   /*!< CCD temperature in degree C */
     uint64_t timestamp;                                  /*!< Timestamp since epoch in ms */
     std::string cameraName;                              /*!< Camera name */
     int64_t gain;                                        /*!< Gain */
@@ -134,7 +134,7 @@ public:
      * @param key Metadata key
      * @param value Metadata value
      */
-    inline void AddExtendedAttribute(std::string key, std::string value)
+    inline void AddExtendedAttribute(std::string const &key, std::string const &value)
     {
         extendedMetadata[key] = value;
     }
@@ -248,7 +248,7 @@ public:
      * @param key String key
      * @param value String value
      */
-    void SetExtendedMetadata(std::string const key, std::string const value)
+    void SetExtendedMetadata(std::string const &key, std::string const &value)
     {
         m_metadata.AddExtendedAttribute(key, value);
     }
@@ -357,7 +357,10 @@ public:
      *
      * @param syncOnWrite Sync on write (write to disk immediately).
      * @param DirNamePrefix Directory name prefix (if NULL, uses ./fits)
-     * @param fileNameFormat File name format. If NULL, uses <{@link CIMAGE_PREFIX_STRING}>_<timestamp>.fit. If not null and does not contain any '%' character, uses <fileNameFormat>_<timestamp>.fit. If the file exists, numbers are appended to the file name. Presence of a '%' character indicates that the file name format is a printf-style format string.
+     * @param fileNameFormat File name format. If NULL, uses <CIMAGE_PREFIX_STRING>_<timestamp>.fit. 
+     * If not null and does not contain any '%' character, uses <fileNameFormat>_<timestamp>.fit. 
+     * If the file exists, numbers are appended to the file name. 
+     * Presence of a '%' character indicates that the file name format is a printf-style format string.
      *
      * @return bool Returns true if successful, false otherwise.
      */

@@ -728,6 +728,9 @@ bool CImageData::FindOptimumExposure(float &targetExposure, int &bin, float perc
         goto ret;
     }
 
+    if (val < 1e-5) // value is zero?
+        val = 1e-5;
+
     targetExposure = ((double)pixelTarget) * exposure / ((double)val); // target optimum exposure
     targetExposure_ = targetExposure;
 #ifdef CIMAGE_OPTIMUM_EXP_DEBUG

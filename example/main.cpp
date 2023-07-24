@@ -1,5 +1,6 @@
 #include "CameraUnit_ASI.hpp"
 #include "meb_print.h"
+#include "ini.h"
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
@@ -43,6 +44,74 @@ static char dirname[256] = {
     0,
 };
 
+typedef struct
+{
+    const char *progname;
+    const char *savedir;
+    float cadence,
+        maxexposure,
+        percentile,
+        temperature;
+    int maxbin,
+        value,
+        uncertainty,
+        gain;
+} asicam_config;
+
+static int inihandler(void *user, const char *section, const char *name, const char *value)
+{
+    asicam_config *pconfig = (asicam_config *)user;
+    if (user == NULL)
+    {
+        dbprintlf(FATAL "user is NULL");
+        exit(0);
+    }
+
+#define MATCH(s, n) (strcmp(section, s) == 0 && strcmp(name, #n) == 0)
+#define ASSIGNF(n) pconfig->##n = atof(value)
+#define ASSIGNI(n) pconfig->##n = atol(value)
+#define ASSIGNS(n) pconfig->##n = strdup(value)
+
+#define CHECKS(s, n)      \
+    else if (MATCH(s, n)) \
+    {                     \
+        ASSIGNS(n);       \
+    }
+
+#define CHECKF(s, n)      \
+    else if (MATCH(s, n)) \
+    {                     \
+        ASSIGNF(n);       \
+    }
+
+#define CHECKI(s, n)      \
+    else if (MATCH(s, n)) \
+    {                     \
+        ASSIGNI(n);       \
+    }
+
+    if (MATCH("PROGRAM", name))
+    {
+        pconfig->progname = strdup(value);
+    }
+    CHECKS("CONFIG", savedir)
+    CHECKF("CONFIG", cadence)
+    CHECKF("CONFIG", maxexposure)
+    CHECKF("CONFIG", percentile)
+    CHECKF("CONFIG", temperature)
+    CHECKI("CONFIG", maxbin)
+    CHECKI("CONFIG", value)
+    CHECKI("CONFIG", uncertainty)
+    CHECKI("CONFIG", gain)
+    else
+    {
+        dbprintlf(RED_FG "%s -> %s: %s not accounted for.", section, name, value);
+        return 0;
+    }
+    return 1;
+}
+
+
 #define SEC_TO_USEC(x) ((x)*1000000LLU)
 #define SEC_TO_MSEC(x) ((x)*1000LLU)
 #define MSEC_TO_USEC(x) ((x)*1000LLU)
@@ -50,22 +119,69 @@ static char dirname[256] = {
 #define FRAME_TIME_SEC 20
 void frame_grabber(CCameraUnit *cam, uint64_t cadence, volatile bool *start_capture) // cadence in seconds
 {
+    static char *progname = "asicam";
+    static char *savedir = "./data/";
     static float maxExposure = 200;
     static float pixelPercentile = 99.7;
     static int pixelTarget = 40000;
     static int pixelUncertainty = 5000;
     static int maxBin = 1;
+#define GAIN 200
+    static int gain = GAIN;
     static int imgXMin = 300, imgYMin = 800, imgXMax = 2700, imgYMax = 2100;
 
     static float exposure_1 = 0.2; // 200 ms
     static int bin_1 = 1;          // start with bin 1
+
+    asicam_config pconfig = {
+        .progname = progname,
+        .savedir = "./data/",
+        .cadence = 20,
+        .maxexposure = 200,
+        .percentile = 99.7,
+        .temperature = -20,
+        .maxbin = 1,
+        .value = 40000,
+        .uncertainty = 5000,
+        .gain = 200,
+    };
+
+    if (ini_parse("./asicam.ini", inihandler, &pconfig) < 0)
+    {
+        dbprintlf(FATAL "Could not load asicam.ini");
+        dbprintlf("Using default values");
+    }
+
+    maxExposure = pconfig.maxexposure;
+    pixelPercentile = pconfig.percentile;
+    pixelTarget = pconfig.value;
+    pixelUncertainty = pconfig.uncertainty;
+    maxBin = pconfig.maxbin;
+    gain = pconfig.gain;
+    if (pconfig.progname == NULL || strlen(pconfig.progname) == 0)
+    {
+        progname = "asicam";
+    }
+    else
+    {
+        progname = strdup(pconfig.progname);
+    }
+    if (pconfig.savedir == NULL || strlen(pconfig.savedir) == 0)
+    {
+        savedir = "./data/";
+    }
+    else
+    {
+        savedir = strdup(pconfig.savedir);
+    }
+
     static bool change_roi = true;
     static bool change_exposure = true;
-#define GAIN 200
-    int gain = cam->SetGainRaw(GAIN);
-    if (gain != GAIN)
+
+    int gain_ = cam->SetGainRaw(gain);
+    if (gain_ != gain)
     {
-        bprintlf(RED_FG "Could not set gain to 100");
+        bprintlf(RED_FG "Could not set gain to %d", GAIN);
     }
 
     if (cam == nullptr)
@@ -92,6 +208,22 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence, volatile bool *start_capt
                 cam->SetExposure(exposure_1);
             }
             CImageData img = cam->CaptureImage(); // capture frame
+
+            time_t t = time(NULL);
+            struct tm tm = *localtime(&t);
+
+            snprintf(dirname, sizeof(dirname), "data/%04d%02d%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+
+            try
+            {
+                checknmakedir(dirname);
+            }
+            catch (const std::exception &e)
+            {
+                dbprintlf(FATAL "Error creating directory: %s", e.what());
+                exit(0);
+            }
+            
             if (!img.SaveFITS(true, (char const*)dirname, (char const*)"comics_%" PRIu64, start))     // save frame
             {
                 bprintlf(FATAL "[%" PRIu64 "] AERO: Could not save FITS", start);
@@ -191,21 +323,6 @@ int main(int argc, char *argv[])
     else
     {
         bprintlf(CYAN_FG "Camera %s: UUID %s", camera_names[0].c_str(), camera->GetUUID().second.c_str());
-    }
-
-    bootCount = GetBootCount();
-
-    snprintf(dirname, sizeof(dirname), "data/%d", bootCount);
-
-    try
-    {
-        checknmakedir(dirname);
-    }
-    catch (const std::exception &e)
-    {
-        dbprintlf(FATAL "Error creating directory: %s", e.what());
-        goto close_camera;
-        exit(0);
     }
 
 #define CAMERA_TEMP_SET_POINT -25
