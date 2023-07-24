@@ -94,15 +94,42 @@ static int inihandler(void *user, const char *section, const char *name, const c
     {
         pconfig->progname = strdup(value);
     }
-    CHECKS("CONFIG", savedir)
-    CHECKF("CONFIG", cadence)
-    CHECKF("CONFIG", maxexposure)
-    CHECKF("CONFIG", percentile)
-    CHECKF("CONFIG", temperature)
-    CHECKI("CONFIG", maxbin)
-    CHECKI("CONFIG", value)
-    CHECKI("CONFIG", uncertainty)
-    CHECKI("CONFIG", gain)
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "savedir") == 0))
+    {
+        pconfig->savedir = strdup(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "cadence") == 0))
+    {
+        pconfig->cadence = atof(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "maxexposure") == 0))
+    {
+        pconfig->maxexposure = atof(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "percentile") == 0))
+    {
+        pconfig->percentile = atof(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "temperature") == 0))
+    {
+        pconfig->temperature = atof(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "maxbin") == 0))
+    {
+        pconfig->maxbin = atol(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "value") == 0))
+    {
+        pconfig->value = atol(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "uncertainty") == 0))
+    {
+        pconfig->uncertainty = atol(value);
+    }
+    else if ((strcmp(section, "CONFIG") == 0 && strcmp(name, "gain") == 0))
+    {
+        pconfig->gain = atol(value);
+    }
     else
     {
         dbprintlf(RED_FG "%s -> %s: %s not accounted for.", section, name, value);
@@ -110,7 +137,6 @@ static int inihandler(void *user, const char *section, const char *name, const c
     }
     return 1;
 }
-
 
 #define SEC_TO_USEC(x) ((x)*1000000LLU)
 #define SEC_TO_MSEC(x) ((x)*1000LLU)
@@ -223,8 +249,8 @@ void frame_grabber(CCameraUnit *cam, uint64_t cadence, volatile bool *start_capt
                 dbprintlf(FATAL "Error creating directory: %s", e.what());
                 exit(0);
             }
-            
-            if (!img.SaveFITS(true, (char const*)dirname, (char const*)"comics_%" PRIu64, start))     // save frame
+
+            if (!img.SaveFITS(true, (char const *)dirname, (char const *)"comics_%" PRIu64, start)) // save frame
             {
                 bprintlf(FATAL "[%" PRIu64 "] AERO: Could not save FITS", start);
             }
@@ -309,14 +335,14 @@ int main(int argc, char *argv[])
 
     if (!camera->GetUUID().first)
     {
-        int cameraID = (int)(uint64_t) camera->GetHandle();
+        int cameraID = (int)(uint64_t)camera->GetHandle();
         ASI_ID id;
-        static char *idstr = (char *) "LCSTZA01";
+        static char *idstr = (char *)"LCSTZA01";
         memcpy(id.id, idstr, sizeof(id.id));
         ASI_ERROR_CODE res;
         if ((res = ASISetID(cameraID, id)) != ASI_SUCCESS)
         {
-            dbprintlf(RED_FG "Error setting ID: %d", (int) res);
+            dbprintlf(RED_FG "Error setting ID: %d", (int)res);
         }
         goto close_camera;
     }
