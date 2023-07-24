@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
     int *camera_ids = nullptr;
     std::string *camera_names = nullptr;
     std::thread camera_thread;
-    volatile bool start_capture = false;
+    volatile bool start_capture = true;
     CCameraUnit_ASI::ListCameras(num_cameras, camera_ids, camera_names);
     for (int i = 0; i < num_cameras; i++)
     {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
         bprintlf(CYAN_FG "Camera %s: UUID %s", camera_names[0].c_str(), camera->GetUUID().second.c_str());
     }
 
-#define CAMERA_TEMP_SET_POINT -25
+#define CAMERA_TEMP_SET_POINT -10
     camera->SetTemperature(CAMERA_TEMP_SET_POINT);
 
     camera_thread = std::thread(frame_grabber, camera, cadence, &start_capture);
@@ -360,10 +360,10 @@ int main(int argc, char *argv[])
         sleep(1);
         double temperature = camera->GetTemperature();
         bprintf("%s" GREEN_FG "Current CCD Temperature: %+5.1lf C, Cooler %3.0lf%%\r", get_time_now(), temperature, camera->GetCoolerPower());
-        if (!start_capture && (fabs(temperature - CAMERA_TEMP_SET_POINT) < 0.5)) // not capturing and temperature delta is 0.5 deg, may heat up later
-        {
-            start_capture = true;
-        }
+        // if (!start_capture && (fabs(temperature - CAMERA_TEMP_SET_POINT) < 0.5)) // not capturing and temperature delta is 0.5 deg, may heat up later
+        // {
+        //     start_capture = true;
+        // }
     }
     camera->CancelCapture();
     camera_thread.join();
