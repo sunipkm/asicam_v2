@@ -286,7 +286,11 @@ public:
      *
      * @param autoscale
      */
-    void SetJPEGScaling(bool autoscale);
+    inline void SetJPEGScaling(bool autoscale)
+    {
+        this->autoscale = autoscale;
+        ConvertJPEG(); // update the JPEG image with the new scaling method
+    }
     /**
      * @brief Get statistics on image data
      *
